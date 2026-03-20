@@ -1,6 +1,6 @@
 cask "scout" do
-  version "0.1.0-beta.12"
-  sha256 "14de341e5cec414e08e404077806d60542c16d7f34789a26285faaad3a23c98c"
+  version "0.1.0-beta.13"
+  sha256 "1ce08c14c78e2713ff0398d63e1adb9cfd089dc300f47b1919748a176b857a63"
 
   url "https://github.com/jackspirou/scout/releases/download/v#{version}/Scout.dmg"
   name "Scout"
