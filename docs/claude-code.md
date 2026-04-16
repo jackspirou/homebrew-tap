@@ -18,20 +18,17 @@ brew tap jackspirou/tap
 brew install jackspirou/tap/claude-code
 ```
 
-This installs two binaries:
-
-- `claude` — Claude Code
-- `cc` — alias for `claude`
+This installs the `claude` binary.
 
 ## Shell wrapper (optional)
 
-To make `brew upgrade claude-code` and `brew upgrade cc` resolve to this tap instead of the official one, add this to your `~/.zshrc` or `~/.bashrc`:
+To make `brew upgrade claude-code` resolve to this tap instead of the official one, add this to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 source "$(brew --prefix)/Library/Taps/jackspirou/homebrew-tap/etc/claude-brew.sh"
 ```
 
-Then `brew upgrade claude-code`, `brew install claude-code`, `brew info claude-code` (and the same with `cc`) all route through this tap.
+Then `brew upgrade claude-code`, `brew install claude-code`, `brew info claude-code` all route through this tap.
 
 ## Channel switching
 

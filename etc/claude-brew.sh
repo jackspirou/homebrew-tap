@@ -6,7 +6,7 @@ brew() {
   case "$1" in
     upgrade|install|reinstall|info|uninstall)
       case "$2" in
-        claude-code|cc)
+        claude-code)
           command brew "$1" jackspirou/tap/claude-code "${@:3}"
           return
           ;;
