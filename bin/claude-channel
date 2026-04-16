@@ -2,19 +2,18 @@
 set -euo pipefail
 
 DIST_BASE="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+TAP_CASK="jackspirou/tap/claude-code"
 
-# Find the cask file relative to this script (resolve symlinks)
-SOURCE="$0"
-while [[ -L "$SOURCE" ]]; do
-  SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ "$SOURCE" != /* ]] && SOURCE="${SCRIPT_DIR}/${SOURCE}"
-done
-SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
-CASK_FILE="${SCRIPT_DIR}/../Casks/claude-code.rb"
+# Brew tap clone is the source of truth for brew commands
+BREW_TAP_DIR="$(brew --repository)/Library/Taps/jackspirou/homebrew-tap"
+CASK_FILE="${BREW_TAP_DIR}/Casks/claude-code.rb"
+
+# Source repo for pushing to GitHub
+SOURCE_REPO="$(cd "$(dirname "$(realpath "$0")")/.." && pwd)"
+SOURCE_CASK="${SOURCE_REPO}/Casks/claude-code.rb"
 
 if [[ ! -f "$CASK_FILE" ]]; then
-  echo "error: cannot find Casks/claude-code.rb relative to this script" >&2
+  echo "error: tap not found — run: brew tap jackspirou/tap" >&2
   exit 1
 fi
 
@@ -28,6 +27,7 @@ Commands:
   version <ver>   Pin to a specific version (e.g. 2.1.111)
   status          Show current version, stable, and latest
   livecheck <ch>  Set livecheck to track a channel (latest|stable)
+  sync            Push current cask state to GitHub
 
 Examples:
   claude-channel latest
@@ -54,9 +54,9 @@ current_livecheck_channel() {
   grep -oE 'claude-code-releases/(latest|stable)' "$CASK_FILE" | tail -1 | sed 's|.*releases/||'
 }
 
+# Update version in both brew tap clone and source repo
 set_version() {
   local ver="$1"
-  # Verify the binary exists for this version
   local check_url="${DIST_BASE}/${ver}/darwin-arm64/claude"
   if ! curl -sfI "$check_url" > /dev/null 2>&1; then
     echo "error: version ${ver} not found at distribution URL" >&2
@@ -64,9 +64,11 @@ set_version() {
   fi
 
   sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$CASK_FILE"
+  [[ -f "$SOURCE_CASK" ]] && sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$SOURCE_CASK"
   echo "Cask version set to ${ver}"
 }
 
+# Update livecheck channel in both brew tap clone and source repo
 set_livecheck() {
   local channel="$1"
   if [[ "$channel" != "latest" && "$channel" != "stable" ]]; then
@@ -74,13 +76,31 @@ set_livecheck() {
     exit 1
   fi
   sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
+  [[ -f "$SOURCE_CASK" ]] && sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$SOURCE_CASK"
   echo "Livecheck now tracks: ${channel}"
 }
 
 reinstall() {
   echo ""
   echo "Reinstalling..."
-  brew reinstall jackspirou/tap/claude-code
+  brew reinstall "$TAP_CASK"
+}
+
+sync_to_github() {
+  if [[ ! -f "$SOURCE_CASK" ]]; then
+    echo "warning: source repo not found, skipping GitHub sync" >&2
+    return
+  fi
+  cp "$CASK_FILE" "$SOURCE_CASK"
+  cd "$SOURCE_REPO"
+  if git diff --quiet Casks/claude-code.rb 2>/dev/null; then
+    echo "GitHub repo already in sync."
+  else
+    git add Casks/claude-code.rb
+    git commit -m "claude-code $(grep '^ *version "' Casks/claude-code.rb | sed 's/.*version "//;s/".*//')"
+    git push origin main
+    echo "Pushed to GitHub."
+  fi
 }
 
 show_status() {
@@ -133,6 +153,9 @@ case "$1" in
   livecheck)
     [[ $# -lt 2 ]] && { echo "error: provide a channel (latest|stable)" >&2; exit 1; }
     set_livecheck "$2"
+    ;;
+  sync)
+    sync_to_github
     ;;
   status)
     show_status
