@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIST_BASE="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+
+# Find the cask file relative to this script
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CASK_FILE="${SCRIPT_DIR}/../Casks/claude-code.rb"
+
+if [[ ! -f "$CASK_FILE" ]]; then
+  echo "error: cannot find Casks/claude-code.rb relative to this script" >&2
+  exit 1
+fi
+
+usage() {
+  cat <<EOF
+Usage: claude-channel <command> [args]
+
+Commands:
+  latest          Switch to the latest channel (bleeding edge)
+  stable          Switch to the stable channel
+  version <ver>   Pin to a specific version (e.g. 2.1.111)
+  status          Show current version, stable, and latest
+  livecheck <ch>  Set livecheck to track a channel (latest|stable)
+
+Examples:
+  claude-channel latest
+  claude-channel stable
+  claude-channel version 2.1.105
+  claude-channel livecheck stable
+EOF
+  exit 1
+}
+
+resolve_channel() {
+  local channel="$1"
+  curl -sfL "${DIST_BASE}/${channel}" || {
+    echo "error: could not resolve channel '${channel}'" >&2
+    exit 1
+  }
+}
+
+current_cask_version() {
+  grep '^ *version "' "$CASK_FILE" | head -1 | sed 's/.*version "//;s/".*//'
+}
+
+current_livecheck_channel() {
+  grep -oE 'claude-code-releases/(latest|stable)' "$CASK_FILE" | tail -1 | sed 's|.*releases/||'
+}
+
+set_version() {
+  local ver="$1"
+  # Verify the binary exists for this version
+  local check_url="${DIST_BASE}/${ver}/darwin-arm64/claude"
+  if ! curl -sfI "$check_url" > /dev/null 2>&1; then
+    echo "error: version ${ver} not found at distribution URL" >&2
+    exit 1
+  fi
+
+  sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$CASK_FILE"
+  echo "Cask version set to ${ver}"
+}
+
+set_livecheck() {
+  local channel="$1"
+  if [[ "$channel" != "latest" && "$channel" != "stable" ]]; then
+    echo "error: channel must be 'latest' or 'stable'" >&2
+    exit 1
+  fi
+  sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
+  echo "Livecheck now tracks: ${channel}"
+}
+
+reinstall() {
+  echo ""
+  echo "Reinstalling..."
+  brew reinstall jackspirou/tap/claude-code
+}
+
+show_status() {
+  local current latest_ver stable_ver livecheck_ch installed_ver
+  current="$(current_cask_version)"
+  latest_ver="$(resolve_channel latest)"
+  stable_ver="$(resolve_channel stable)"
+  livecheck_ch="$(current_livecheck_channel)"
+  installed_ver="$(claude --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo 'not installed')"
+
+  echo "Installed binary:        ${installed_ver}"
+  echo "Cask version:            ${current}"
+  echo "Livecheck tracks:        ${livecheck_ch}"
+  echo ""
+  echo "Channel versions:"
+  echo "  latest:  ${latest_ver}"
+  echo "  stable:  ${stable_ver}"
+
+  if [[ "$installed_ver" == "$latest_ver" ]]; then
+    echo ""
+    echo "You are on the latest version."
+  elif [[ "$installed_ver" == "$stable_ver" ]]; then
+    echo ""
+    echo "You are on stable. Latest is ${latest_ver}."
+  fi
+}
+
+[[ $# -lt 1 ]] && usage
+
+case "$1" in
+  latest)
+    ver="$(resolve_channel latest)"
+    echo "Latest channel resolves to: ${ver}"
+    set_version "$ver"
+    set_livecheck "latest"
+    reinstall
+    ;;
+  stable)
+    ver="$(resolve_channel stable)"
+    echo "Stable channel resolves to: ${ver}"
+    set_version "$ver"
+    set_livecheck "stable"
+    reinstall
+    ;;
+  version)
+    [[ $# -lt 2 ]] && { echo "error: provide a version number" >&2; exit 1; }
+    set_version "$2"
+    reinstall
+    ;;
+  livecheck)
+    [[ $# -lt 2 ]] && { echo "error: provide a channel (latest|stable)" >&2; exit 1; }
+    set_livecheck "$2"
+    ;;
+  status)
+    show_status
+    ;;
+  *)
+    usage
+    ;;
+esac
