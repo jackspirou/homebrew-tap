@@ -17,6 +17,7 @@ cask "claude-code" do
   end
 
   binary "claude"
+  binary "claude", target: "cc"
 
   zap trash: [
         "~/.cache/claude",
