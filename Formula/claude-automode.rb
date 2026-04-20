@@ -1,5 +1,5 @@
 class ClaudeAutomode < Formula
-  desc "Daemon that enables auto mode for Claude Code with Opus 4.6 on Max plan"
+  desc "Enables auto mode for Claude Code with Opus/Sonnet 4.6 on Max plan"
   homepage "https://github.com/jackspirou/homebrew-tap"
   head "https://github.com/jackspirou/homebrew-tap.git", branch: "main"
   license "MIT"

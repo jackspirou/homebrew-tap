@@ -6,6 +6,12 @@ Personal [Homebrew](https://brew.sh) tap by [@jackspirou](https://github.com/jac
 brew tap jackspirou/tap
 ```
 
+## Formulae
+
+| Formula | Description | Docs |
+|---------|-------------|------|
+| [claude-automode](Formula/claude-automode.rb) | Enables auto mode for Claude Code with Opus/Sonnet 4.6 on Max plan | [README](docs/claude-automode.md) |
+
 ## Casks
 
 | Cask | Description | Docs |
