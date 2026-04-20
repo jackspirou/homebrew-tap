@@ -20,6 +20,7 @@ Usage: claude-channel [command] [args]
 Commands:
   (none)          Show current status (same as status)
   status          Show installed version, channel, and available updates
+  list [N]        List recent releases (default: 20)
   latest          Switch to the latest channel (bleeding edge)
   stable          Switch to the stable channel
   pin <ver>       Freeze to a specific version (e.g. 2.1.105)
@@ -28,6 +29,8 @@ Commands:
 
 Examples:
   claude-channel
+  claude-channel list
+  claude-channel list 10
   claude-channel latest
   claude-channel pin 2.1.105
   claude-channel inspect 2.1.114
@@ -179,6 +182,56 @@ cmd_upgrade() {
   sync
 }
 
+cmd_list() {
+  local count="${1:-20}"
+  local installed latest_ver stable_ver
+  installed="$(installed_version)"
+  latest_ver="$(resolve_channel latest)"
+  stable_ver="$(resolve_channel stable)"
+
+  local response
+  response=$(curl -sf "https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=${count}" 2>/dev/null) || {
+    echo "error: could not fetch releases from GitHub" >&2
+    exit 1
+  }
+
+  echo "$response" | python3 -c "
+import sys, json
+
+releases = json.load(sys.stdin)
+installed = '${installed}'
+latest = '${latest_ver}'
+stable = '${stable_ver}'
+
+print('Claude Code Releases')
+print('====================')
+print('')
+print(f'  latest channel:  {latest}')
+print(f'  stable channel:  {stable}')
+print(f'  installed:       {installed}')
+print('')
+
+for r in releases:
+    tag = r.get('tag_name', '')
+    ver = tag.lstrip('v')
+    date = (r.get('published_at') or '')[:10]
+
+    markers = []
+    if ver == installed:
+        markers.append('installed')
+    if ver == latest:
+        markers.append('latest')
+    if ver == stable:
+        markers.append('stable')
+
+    suffix = f'  ({', '.join(markers)})' if markers else ''
+    print(f'  {ver:>12}  {date}{suffix}')
+
+print('')
+print('Inspect a version:  claude-channel inspect <version>')
+" 2>/dev/null
+}
+
 cmd_inspect() {
   local ver="${1:-$(installed_version)}"
 
@@ -230,6 +283,7 @@ case "${1:-status}" in
     cmd_pin "$2"
     ;;
   upgrade)         cmd_upgrade ;;
+  list)            cmd_list "${2:-}" ;;
   inspect)         cmd_inspect "${2:-}" ;;
   -h|--help|help)  usage ;;
   *)               usage ;;

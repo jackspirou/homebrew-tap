@@ -42,6 +42,7 @@ The `claude-channel` command is installed by `claude-plus`.
 
 ```bash
 claude-channel                   # show status + available updates
+claude-channel list              # list recent releases with dates
 claude-channel latest            # switch to latest (bleeding edge)
 claude-channel stable            # switch to stable
 claude-channel pin 2.1.105       # freeze to specific version
