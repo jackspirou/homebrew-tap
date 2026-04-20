@@ -206,11 +206,17 @@ cmd_inspect() {
 
   local date body
   date=$(echo "$response" | grep '"published_at"' | head -1 | sed 's/.*": "//;s/T.*//')
-  body=$(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('body','No release notes.'))" 2>/dev/null || echo "No release notes.")
+  body=$(echo "$response" | python3 -c "
+import sys, json
+b = json.load(sys.stdin).get('body', '') or ''
+print(b.strip() if b.strip() else 'No release notes for this version.')
+" 2>/dev/null || echo "No release notes.")
 
   echo "Released: ${date}"
   echo ""
   echo "$body"
+  echo ""
+  echo "https://github.com/${GITHUB_REPO}/releases/tag/v${ver}"
 }
 
 # --- main ---
