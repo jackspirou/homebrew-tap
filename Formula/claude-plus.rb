@@ -199,6 +199,13 @@ SHELL
     chmod 0755, bin/"claude-setup"
   end
 
+  def post_install
+    # Ensure all bin scripts are executable (Homebrew may reset permissions)
+    (bin/"claude-setup").chmod 0755
+    (bin/"claude-auto").chmod 0755
+    (bin/"claude-automode-daemon").chmod 0755
+  end
+
   def caveats
     <<~EOS
       Run the setup command:
