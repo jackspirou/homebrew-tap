@@ -121,6 +121,17 @@ brew upgrade claude-code
 
 This checks the livecheck URL for your tracked channel (latest or stable) and upgrades if a newer version is available.
 
+## Auto mode (4.5/4.6 on Max plan)
+
+Auto mode officially requires Opus 4.7 on Max plan. To enable it with 4.5/4.6 models:
+
+```bash
+brew install --HEAD jackspirou/tap/claude-automode
+echo "alias claude='claude-auto'" >> ~/.zshrc
+```
+
+See [claude-automode docs](claude-automode.md) for details.
+
 ## Uninstall
 
 ```bash

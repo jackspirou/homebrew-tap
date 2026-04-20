@@ -32,23 +32,27 @@ On Max plan, auto mode officially requires Opus 4.7. This formula patches the Gr
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  BACKGROUND WATCHER (auto-starts when needed)               │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │  claude-automode-daemon                                │ │
-│  │  • Patches ~/.claude.json on start                     │ │
-│  │  • Re-patches when GrowthBook refreshes (every 6 hrs)  │ │
-│  └────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
 │  $ claude  (via alias)                                      │
 │       │                                                     │
 │       ▼                                                     │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  claude-auto wrapper:                               │    │
-│  │  1. Ensure watcher is running (start if not)        │    │
-│  │  2. exec claude --permission-mode auto              │    │
+│  │                                                     │    │
+│  │  if watcher not running:                            │    │
+│  │    1. Patch config (sync)    ← guarantees ready     │    │
+│  │    2. Start watcher (async)  ← for future refreshes │    │
+│  │                                                     │    │
+│  │  3. exec claude --permission-mode auto              │    │
 │  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  BACKGROUND WATCHER (started automatically)                 │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  claude-automode-daemon                                │ │
+│  │  • Re-patches when GrowthBook refreshes (every 6 hrs)  │ │
+│  │  • Keeps config patched for IDE/direct invocations     │ │
+│  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
