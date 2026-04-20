@@ -8,8 +8,14 @@ The official Homebrew cask tracks the **stable** channel, which can lag behind G
 
 | Channel | What it tracks |
 |---------|---------------|
-| `latest` | Bleeding edge — same as [GitHub releases](https://github.com/anthropics/claude-code/releases) |
-| `stable` | Anthropic's promoted stable releases (lags behind latest) |
+| `latest` | Bleeding edge — every [GitHub release](https://github.com/anthropics/claude-code/releases) |
+| `stable` | Anthropic's promoted stable release (a single version, lags behind latest) |
+
+### How channels work
+
+Channels are **pointers**, not separate release streams. Every Claude Code version is published to GitHub as a release. The `latest` channel always points to the newest one. The `stable` channel points to a single version that Anthropic has promoted — it can lag behind `latest` by days or weeks.
+
+`claude-channel list` shows all available releases with markers for which version is currently the `latest` and `stable` head. There is no separate history of stable versions — it's just a pointer that moves forward over time.
 
 ## Install
 

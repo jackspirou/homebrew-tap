@@ -20,6 +20,17 @@ After setup:
 | `claude-setup status` | Check current configuration |
 | `claude-setup undo` | Revert all changes |
 
+## Channels
+
+Channels are pointers, not separate release streams. Every version is published to GitHub. `latest` points to the newest release; `stable` points to one version Anthropic has promoted (lags behind by days or weeks).
+
+```bash
+claude-channel list              # browse all releases with latest/stable markers
+claude-channel inspect 2.1.114   # view changelog for any version
+```
+
+This tap tracks `latest` by default. The official Homebrew cask tracks `stable`.
+
 ## Why two packages?
 
 Homebrew requires a [Cask](https://docs.brew.sh/Cask-Cookbook) to download pre-built binaries and a [Formula](https://docs.brew.sh/Formula-Cookbook) to generate scripts and run services. These can't be combined into one package.
