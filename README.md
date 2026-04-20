@@ -7,8 +7,7 @@ Personal [Homebrew](https://brew.sh) tap by [@jackspirou](https://github.com/jac
 ```bash
 brew install jackspirou/tap/claude-code
 brew install --HEAD jackspirou/tap/claude-plus
-claude-setup
-source ~/.zshrc
+claude-setup && source ~/.zshrc
 ```
 
 After setup:

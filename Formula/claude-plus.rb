@@ -156,12 +156,14 @@ SHELL
           fi
 
           echo ""
-          echo "  Done! Run: source $SHELL_RC"
+          echo "  To activate now, run:"
           echo ""
-          echo "  claude        auto mode (via alias)"
-          echo "  \\\\claude       normal mode (bypass alias)"
-          echo "  claude-channel  version/channel management"
-          echo "  claude-setup status  check current state"
+          echo "    source $SHELL_RC"
+          echo ""
+          echo "  Then:"
+          echo "    claude          auto mode"
+          echo "    \\\\claude         normal mode (bypass alias)"
+          echo "    claude-channel  version/channel management"
           echo ""
       }
 

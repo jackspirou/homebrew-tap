@@ -7,8 +7,7 @@ Auto mode, channel switching, and setup tools for [Claude Code](https://www.anth
 ```bash
 brew install jackspirou/tap/claude-code
 brew install --HEAD jackspirou/tap/claude-plus
-claude-setup
-source ~/.zshrc
+claude-setup && source ~/.zshrc
 ```
 
 That's it. Use `claude` for auto mode, `\claude` for normal mode.
