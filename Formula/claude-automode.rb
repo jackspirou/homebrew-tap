@@ -72,11 +72,18 @@ class ClaudeAutomode < Formula
     EOS
     chmod 0755, bin/"claude-automode-daemon"
 
-    # Create wrapper that patches and runs claude
+    # Create wrapper that ensures watcher is running and runs claude with auto mode
     (bin/"claude-auto").write <<~EOS
       #!/bin/bash
       # Wrapper for Claude Code that enables auto mode with 4.5/4.6 models on Max plan
-      #{bin}/claude-automode-daemon --once
+
+      # Ensure watcher is running (handles all patching)
+      if ! pgrep -qf claude-automode-daemon; then
+          # Patch once for immediate use, then start watcher for persistence
+          #{bin}/claude-automode-daemon --once
+          brew services start claude-automode 2>/dev/null &
+      fi
+
       exec claude --permission-mode auto "$@"
     EOS
     chmod 0755, bin/"claude-auto"
@@ -84,16 +91,17 @@ class ClaudeAutomode < Formula
 
   def caveats
     <<~EOS
-      Quick start - add this alias to your shell config:
+      Add to your ~/.zshrc:
 
-        echo "alias claude='claude-auto'" >> ~/.zshrc
+        alias claude='claude-auto'
 
-      Then just use `claude` normally - auto mode will work automatically.
+      That's it. The watcher service starts automatically when needed.
 
-      Optional: For persistent patching (survives GrowthBook refresh even when
-      not using claude), start the background service:
-
-        brew services start claude-automode
+      Manual control:
+        brew services start claude-automode   # start watcher
+        brew services stop claude-automode    # stop watcher
+        claude-auto                           # run with auto mode
+        \\claude                               # run without auto mode
     EOS
   end
 

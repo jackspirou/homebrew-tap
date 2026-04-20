@@ -10,7 +10,7 @@ echo "alias claude='claude-auto'" >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Done. Now just use `claude` normally with auto mode enabled.
+Done. Use `claude` for auto mode, `\claude` for normal mode.
 
 ## Why this formula?
 
@@ -30,48 +30,42 @@ On Max plan, auto mode officially requires Opus 4.7. This formula patches the Gr
 
 ## How it works
 
-1. Claude Code stores GrowthBook feature flags in `~/.claude.json`
-2. The flag `tengu_auto_mode_config.enabled` controls auto mode availability
-3. The `claude-auto` wrapper patches the config before each invocation
-4. Auto mode just works - no background service needed
+```
+┌─────────────────────────────────────────────────────────────┐
+│  BACKGROUND WATCHER (auto-starts when needed)               │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  claude-automode-daemon                                │ │
+│  │  • Patches ~/.claude.json on start                     │ │
+│  │  • Re-patches when GrowthBook refreshes (every 6 hrs)  │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  $ claude  (via alias)                                      │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  claude-auto wrapper:                               │    │
+│  │  1. Ensure watcher is running (start if not)        │    │
+│  │  2. exec claude --permission-mode auto              │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Usage
 
-### Alias (recommended)
+| Command | Mode | Notes |
+|---------|------|-------|
+| `claude` | Auto | Via alias, starts watcher if needed |
+| `\claude` | Normal | Bypasses alias |
+| `claude-auto` | Auto | Direct wrapper call |
 
-Add to your shell config:
-
-```bash
-# ~/.zshrc or ~/.bashrc
-alias claude='claude-auto'
-```
-
-Then use `claude` normally - the wrapper patches and runs with `--permission-mode auto`.
-
-### Background service (optional)
-
-If you use plain `claude` (without the alias) and want persistent patching even when GrowthBook refreshes every 6 hours:
+### Manual service control
 
 ```bash
-brew services start claude-automode
-```
-
-Service commands:
-
-```bash
-brew services stop claude-automode
-brew services restart claude-automode
-brew services list | grep claude-automode
-```
-
-### Manual
-
-```bash
-# Patch once and exit
-claude-automode-daemon --once
-
-# Run daemon in foreground
-claude-automode-daemon
+brew services start claude-automode   # start watcher
+brew services stop claude-automode    # stop watcher
+brew services list | grep claude      # check status
 ```
 
 ## Logs
