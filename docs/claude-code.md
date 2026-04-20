@@ -14,75 +14,50 @@ The official Homebrew cask tracks the **stable** channel, which can lag behind G
 ## Install
 
 ```bash
-brew tap jackspirou/tap
 brew install jackspirou/tap/claude-code
 ```
 
 This installs the `claude` binary.
 
-## Shell wrapper
+## Claude Plus (recommended)
 
-To make `brew upgrade claude-code` resolve to this tap, install [claude-plus](claude-plus.md):
+For auto mode, channel switching, and shell setup in one step:
 
 ```bash
 brew install --HEAD jackspirou/tap/claude-plus
 claude-setup
 ```
 
-This also enables auto mode, channel switching, and the brew routing wrapper.
+This configures:
+- Auto mode for 4.5/4.6 models on Max plan
+- `claude-channel` command for version management
+- Brew routing so `brew upgrade claude-code` uses this tap
+- Shell alias (`claude` runs with auto mode, `\claude` for normal)
 
-## Channel switching
+See [claude-plus docs](claude-plus.md) for details.
 
-The `claude-channel` command is installed by the `claude-plus` formula.
+## Channel Switching
 
-### Commands
-
-```bash
-# Show current version and what's available
-claude-channel status
-```
-
-```
-Installed binary:        2.1.111
-Cask version:            2.1.111
-Livecheck tracks:        latest
-
-Channel versions:
-  latest:  2.1.111
-  stable:  2.1.97
-
-You are on the latest version.
-```
+The `claude-channel` command is installed by `claude-plus`.
 
 ```bash
-# Switch to the latest channel (bleeding edge)
-claude-channel latest
-
-# Switch to the stable channel
-claude-channel stable
-
-# Pin to a specific version
-claude-channel version 2.1.105
-
-# Change what `brew upgrade` tracks without reinstalling
-claude-channel livecheck stable
-
-# Push current cask state to GitHub
-claude-channel sync
+claude-channel status            # show current version and channels
+claude-channel latest            # switch to latest (bleeding edge)
+claude-channel stable            # switch to stable
+claude-channel version 2.1.105   # pin to specific version
+claude-channel livecheck stable  # change what brew upgrade tracks
+claude-channel sync              # push cask changes to GitHub
 ```
 
-### Switching channels
-
-Each channel command resolves the current version, updates the cask, and reinstalls in one step:
+Each channel command resolves the version, updates the cask, and reinstalls:
 
 ```bash
 $ claude-channel latest
-Latest channel resolves to: 2.1.111
-Cask version set to 2.1.111
+Latest channel resolves to: 2.1.114
+Cask version set to 2.1.114
 Livecheck now tracks: latest
 
 Reinstalling...
-🍺  claude-code was successfully installed!
 ```
 
 ### Pinning a version
@@ -90,14 +65,10 @@ Reinstalling...
 Pin to any version published to Anthropic's CDN:
 
 ```bash
-$ claude-channel version 2.1.100
-Cask version set to 2.1.100
-
-Reinstalling...
-🍺  claude-code was successfully installed!
+claude-channel version 2.1.100
 ```
 
-Pinning does not change the livecheck channel, so `brew upgrade` will still move you forward based on your tracked channel. To freeze completely, pin the version and set livecheck to match:
+Pinning does not change the livecheck channel, so `brew upgrade` will still move you forward. To freeze completely:
 
 ```bash
 claude-channel version 2.1.100
@@ -106,25 +77,15 @@ claude-channel livecheck stable
 
 ## Upgrading
 
-Once installed, upgrade like any other cask:
-
 ```bash
 brew upgrade claude-code
 ```
 
-This checks the livecheck URL for your tracked channel (latest or stable) and upgrades if a newer version is available.
-
-## Auto mode (4.5/4.6 on Max plan)
-
-Auto mode officially requires Opus 4.7 on Max plan. To enable it with 4.5/4.6 models, install `claude-plus` (see above) which handles auto mode, channel switching, and shell configuration in one step.
-
-See [claude-plus docs](claude-plus.md) for details.
+This checks the livecheck URL for your tracked channel and upgrades if a newer version is available.
 
 ## Uninstall
 
 ```bash
+claude-setup undo               # if claude-plus is installed
 brew uninstall claude-code
-brew untap jackspirou/tap
 ```
-
-If you have `claude-plus` installed, also run `claude-setup undo`.

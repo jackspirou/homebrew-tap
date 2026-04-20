@@ -2,10 +2,6 @@
 
 Personal [Homebrew](https://brew.sh) tap by [@jackspirou](https://github.com/jackspirou).
 
-```
-brew tap jackspirou/tap
-```
-
 ## Quick Start (Claude Code)
 
 ```bash
@@ -13,6 +9,8 @@ brew install jackspirou/tap/claude-code
 brew install --HEAD jackspirou/tap/claude-plus
 claude-setup
 ```
+
+This installs Claude Code, enables auto mode for 4.5/4.6 models on Max plan, sets up channel switching, and configures your shell.
 
 ## Formulae
 
@@ -24,5 +22,5 @@ claude-setup
 
 | Cask | Description | Docs |
 |------|-------------|------|
-| [claude-code](Casks/claude-code.rb) | Claude Code with channel switching and version pinning | [README](docs/claude-code.md) |
+| [claude-code](Casks/claude-code.rb) | Claude Code binary with latest/stable channel tracking | [README](docs/claude-code.md) |
 | [scout](Casks/scout.rb) | Native macOS file manager built with Swift and AppKit | — |

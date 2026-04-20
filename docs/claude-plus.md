@@ -8,24 +8,10 @@ Auto mode, channel switching, and setup tools for [Claude Code](https://www.anth
 brew install jackspirou/tap/claude-code
 brew install --HEAD jackspirou/tap/claude-plus
 claude-setup
+source ~/.zshrc
 ```
 
-```
-Claude Plus Setup
-=================
-
-  ✓ Claude binary found
-  ✓ Auto mode patched
-  ✓ Watcher started
-  ✓ Shell configured (.zshrc)
-
-  Done! Run: source ~/.zshrc
-
-  claude          auto mode (via alias)
-  \claude         normal mode (bypass alias)
-  claude-channel  version/channel management
-  claude-setup status  check current state
-```
+That's it. Use `claude` for auto mode, `\claude` for normal mode.
 
 ## What's included
 
@@ -105,6 +91,14 @@ What `claude-setup` does:
 3. Adds `alias claude='claude-auto'` to shell config
 4. Sources brew wrapper for `brew upgrade claude-code` routing
 
+## Usage
+
+| Command | Mode | Notes |
+|---------|------|-------|
+| `claude` | Auto | Via alias, starts watcher if needed |
+| `\claude` | Normal | Bypasses alias, runs claude directly |
+| `claude-auto` | Auto | Direct wrapper call |
+
 ## Manual Control
 
 ```bash
@@ -141,6 +135,9 @@ Modifies `~/.claude.json`:
   }
 }
 ```
+
+- `enabled` unlocks auto mode for supported model families
+- `allowModels` bypasses the hardcoded model check for 4.5/4.6 families
 
 ## Limitations
 
