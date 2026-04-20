@@ -84,17 +84,16 @@ class ClaudeAutomode < Formula
 
   def caveats
     <<~EOS
-      To enable auto mode persistence, start the background service:
+      Quick start - add this alias to your shell config:
+
+        echo "alias claude='claude-auto'" >> ~/.zshrc
+
+      Then just use `claude` normally - auto mode will work automatically.
+
+      Optional: For persistent patching (survives GrowthBook refresh even when
+      not using claude), start the background service:
+
         brew services start claude-automode
-
-      Or run manually:
-        claude-automode-daemon &
-
-      You can also use the wrapper command:
-        claude-auto
-
-      To make claude-auto the default, add to your ~/.zshrc:
-        alias claude='claude-auto'
     EOS
   end
 

@@ -10,7 +10,7 @@ brew tap jackspirou/tap
 
 | Formula | Description | Docs |
 |---------|-------------|------|
-| [claude-automode](Formula/claude-automode.rb) | Enables auto mode for Claude Code with Opus/Sonnet 4.6 on Max plan | [README](docs/claude-automode.md) |
+| [claude-automode](Formula/claude-automode.rb) | Enables auto mode for Claude Code with 4.5/4.6 models on Max plan | [README](docs/claude-automode.md) |
 
 ## Casks
 
