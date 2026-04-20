@@ -196,7 +196,7 @@ SHELL
           *)      echo "Usage: claude-setup [status|undo]"; exit 1 ;;
       esac
     BASH
-    chmod 0755, bin/"claude-setup"
+    (bin/"claude-setup").chmod 0755
   end
 
   def caveats
