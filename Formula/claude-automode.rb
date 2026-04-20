@@ -8,7 +8,11 @@ class ClaudeAutomode < Formula
   depends_on "jq"
 
   def install
-    # Create the daemon script
+    # Get dependency paths
+    fswatch_bin = Formula["fswatch"].opt_bin/"fswatch"
+    jq_bin = Formula["jq"].opt_bin/"jq"
+
+    # Create the daemon script with full paths
     (bin/"claude-automode-daemon").write <<~EOS
       #!/bin/bash
       # Daemon that watches ~/.claude.json and re-patches auto mode whenever it changes
@@ -19,12 +23,14 @@ class ClaudeAutomode < Formula
 
       CLAUDE_CONFIG="$HOME/.claude.json"
       PATCH_VALUE='enabled'
+      JQ="#{jq_bin}"
+      FSWATCH="#{fswatch_bin}"
 
       patch_config() {
           if [ -f "$CLAUDE_CONFIG" ]; then
-              current=$(jq -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$CLAUDE_CONFIG" 2>/dev/null)
+              current=$("$JQ" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$CLAUDE_CONFIG" 2>/dev/null)
               if [ "$current" != "$PATCH_VALUE" ]; then
-                  jq '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled"' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \\
+                  "$JQ" '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled"' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \\
                   mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG" && \\
                   echo "[$(date '+%H:%M:%S')] Patched auto mode: $current -> $PATCH_VALUE"
               fi
@@ -41,7 +47,7 @@ class ClaudeAutomode < Formula
       echo "Watching $CLAUDE_CONFIG for changes... (Ctrl+C to stop)"
 
       # Use fswatch for efficient file watching
-      fswatch -0 "$CLAUDE_CONFIG" 2>/dev/null | while read -d "" event; do
+      "$FSWATCH" -0 "$CLAUDE_CONFIG" 2>/dev/null | while read -d "" event; do
           sleep 0.1  # Debounce
           patch_config
       done
