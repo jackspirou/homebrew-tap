@@ -63,7 +63,7 @@ class ClaudePlus < Formula
 
     # Generate setup command
     brew_sh = opt_share/"claude-plus/claude-brew.sh"
-    (buildpath/"claude-setup").write <<~BASH
+    (bin/"claude-setup").write <<~SETUP
       #!/bin/bash
       set -euo pipefail
 
@@ -195,9 +195,8 @@ SHELL
           "")     setup ;;
           *)      echo "Usage: claude-setup [status|undo]"; exit 1 ;;
       esac
-    BASH
-    (buildpath/"claude-setup").chmod 0755
-    bin.install "claude-setup"
+    SETUP
+    chmod 0755, bin/"claude-setup"
   end
 
   def caveats
