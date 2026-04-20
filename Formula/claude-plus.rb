@@ -54,7 +54,7 @@ class ClaudePlus < Formula
     (bin/"claude-auto").write <<~BASH
       #!/bin/bash
       if ! pgrep -qf claude-automode-daemon; then
-          #{bin}/claude-automode-daemon --once
+          #{opt_bin}/claude-automode-daemon --once
           brew services start claude-plus 2>/dev/null &
       fi
       exec claude --permission-mode auto "$@"
@@ -62,7 +62,7 @@ class ClaudePlus < Formula
     chmod 0755, bin/"claude-auto"
 
     # Generate setup command
-    brew_sh = share/"claude-plus/claude-brew.sh"
+    brew_sh = opt_share/"claude-plus/claude-brew.sh"
     (bin/"claude-setup").write <<~BASH
       #!/bin/bash
       set -euo pipefail
@@ -134,7 +134,7 @@ class ClaudePlus < Formula
           fi
 
           # Patch config
-          #{bin}/claude-automode-daemon --once 2>/dev/null
+          #{opt_bin}/claude-automode-daemon --once 2>/dev/null
           echo "  ✓ Auto mode patched"
 
           # Start watcher
