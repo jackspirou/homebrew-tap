@@ -1,18 +1,22 @@
 # Claude Auto Mode
 
-Enables [auto mode](https://www.anthropic.com/engineering/claude-code-auto-mode) for Claude Code with Opus 4.6 or Sonnet 4.6 on Max plan.
+Enables [auto mode](https://www.anthropic.com/engineering/claude-code-auto-mode) for Claude Code with 4.5 and 4.6 model families on Max plan.
 
 ## Why this formula?
 
-On Max plan, auto mode officially requires Opus 4.7. This formula patches the GrowthBook feature flag to enable auto mode with older models that technically support it but are artificially restricted.
+On Max plan, auto mode officially requires Opus 4.7. This formula patches the GrowthBook feature flags to enable auto mode with older models that are artificially restricted.
 
 ### Supported models
 
 | Model | Native Auto Mode | With This Patch |
 |-------|------------------|-----------------|
 | claude-opus-4-7 | Max, Team, Enterprise | (not needed) |
-| claude-opus-4-6 | Team, Enterprise only | Max |
-| claude-sonnet-4-6 | Team, Enterprise only | Max |
+| claude-opus-4-6 | Team, Enterprise only | **Max** |
+| claude-sonnet-4-6 | Team, Enterprise only | **Max** |
+| claude-haiku-4-6 | Not available | **Max** |
+| claude-opus-4-5 | Not available | **Max** |
+| claude-sonnet-4-5 | Not available | **Max** |
+| claude-haiku-4-5 | Not available | **Max** |
 
 ## How it works
 

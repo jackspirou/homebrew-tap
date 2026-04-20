@@ -1,5 +1,5 @@
 class ClaudeAutomode < Formula
-  desc "Enables auto mode for Claude Code with Opus/Sonnet 4.6 on Max plan"
+  desc "Enables auto mode for Claude Code with 4.5/4.6 models on Max plan"
   homepage "https://github.com/jackspirou/homebrew-tap"
   head "https://github.com/jackspirou/homebrew-tap.git", branch: "main"
   license "MIT"
@@ -22,17 +22,35 @@ class ClaudeAutomode < Formula
       #   claude-automode-daemon --once   # Patch once and exit
 
       CLAUDE_CONFIG="$HOME/.claude.json"
-      PATCH_VALUE='enabled'
       JQ="#{jq_bin}"
       FSWATCH="#{fswatch_bin}"
 
+      # Models to enable for auto mode (4.5 and 4.6 families)
+      ALLOWED_MODELS='["claude-opus-4-5","claude-sonnet-4-5","claude-haiku-4-5","claude-opus-4-6","claude-sonnet-4-6","claude-haiku-4-6"]'
+
       patch_config() {
           if [ -f "$CLAUDE_CONFIG" ]; then
-              current=$("$JQ" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$CLAUDE_CONFIG" 2>/dev/null)
-              if [ "$current" != "$PATCH_VALUE" ]; then
-                  "$JQ" '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled"' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \\
+              needs_patch=false
+
+              # Check if enabled flag needs patching
+              current_enabled=$("$JQ" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$CLAUDE_CONFIG" 2>/dev/null)
+              if [ "$current_enabled" != "enabled" ]; then
+                  needs_patch=true
+              fi
+
+              # Check if allowModels needs patching
+              current_models=$("$JQ" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels // empty' "$CLAUDE_CONFIG" 2>/dev/null)
+              if [ -z "$current_models" ] || [ "$current_models" = "null" ]; then
+                  needs_patch=true
+              fi
+
+              if [ "$needs_patch" = true ]; then
+                  "$JQ" --argjson models "$ALLOWED_MODELS" '
+                      .cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled" |
+                      .cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels = $models
+                  ' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \\
                   mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG" && \\
-                  echo "[$(date '+%H:%M:%S')] Patched auto mode: $current -> $PATCH_VALUE"
+                  echo "[$(date '+%H:%M:%S')] Patched auto mode: enabled + allowModels for 4.5/4.6 families"
               fi
           fi
       }
@@ -57,7 +75,7 @@ class ClaudeAutomode < Formula
     # Create wrapper that patches and runs claude
     (bin/"claude-auto").write <<~EOS
       #!/bin/bash
-      # Wrapper for Claude Code that enables auto mode with Opus 4.6 on Max plan
+      # Wrapper for Claude Code that enables auto mode with 4.5/4.6 models on Max plan
       #{bin}/claude-automode-daemon --once
       exec claude --permission-mode auto "$@"
     EOS
