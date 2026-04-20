@@ -1,0 +1,19 @@
+#!/bin/bash
+# Patches ~/.claude.json to enable auto mode for Opus 4.6 on Max plan
+# Run this before starting Claude Code, or add to your shell profile
+
+CLAUDE_CONFIG="$HOME/.claude.json"
+
+if [ ! -f "$CLAUDE_CONFIG" ]; then
+    echo "Error: $CLAUDE_CONFIG not found"
+    exit 1
+fi
+
+# Backup original
+cp "$CLAUDE_CONFIG" "$CLAUDE_CONFIG.bak"
+
+# Patch the GrowthBook cache to enable auto mode
+jq '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled"' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+
+echo "Auto mode enabled for Opus 4.6"

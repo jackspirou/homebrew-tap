@@ -1,0 +1,44 @@
+#!/bin/bash
+# Daemon that watches ~/.claude.json and re-patches auto mode whenever it changes
+# Install: Add to your shell profile or run as a background process
+#
+# Usage:
+#   claude-automode-daemon &        # Run in background
+#   claude-automode-daemon --once   # Patch once and exit
+
+CLAUDE_CONFIG="$HOME/.claude.json"
+PATCH_VALUE='enabled'
+
+patch_config() {
+    if [ -f "$CLAUDE_CONFIG" ]; then
+        current=$(jq -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$CLAUDE_CONFIG" 2>/dev/null)
+        if [ "$current" != "$PATCH_VALUE" ]; then
+            jq '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled"' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \
+            mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG" && \
+            echo "[$(date '+%H:%M:%S')] Patched auto mode: $current -> $PATCH_VALUE"
+        fi
+    fi
+}
+
+# Initial patch
+patch_config
+
+if [ "$1" = "--once" ]; then
+    exit 0
+fi
+
+echo "Watching $CLAUDE_CONFIG for changes... (Ctrl+C to stop)"
+
+# Use fswatch if available, fall back to polling
+if command -v fswatch &> /dev/null; then
+    fswatch -0 "$CLAUDE_CONFIG" 2>/dev/null | while read -d "" event; do
+        sleep 0.1  # Debounce
+        patch_config
+    done
+else
+    # Fallback: poll every 2 seconds
+    while true; do
+        sleep 2
+        patch_config
+    done
+fi
