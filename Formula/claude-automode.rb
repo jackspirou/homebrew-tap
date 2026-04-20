@@ -1,9 +1,7 @@
 class ClaudeAutomode < Formula
   desc "Daemon that enables auto mode for Claude Code with Opus 4.6 on Max plan"
   homepage "https://github.com/jackspirou/homebrew-tap"
-  url "https://github.com/jackspirou/homebrew-tap/archive/refs/heads/main.tar.gz"
-  version "1.0.0"
-  sha256 :no_check
+  head "https://github.com/jackspirou/homebrew-tap.git", branch: "main"
   license "MIT"
 
   depends_on "fswatch"
