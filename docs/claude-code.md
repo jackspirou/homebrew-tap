@@ -20,27 +20,20 @@ brew install jackspirou/tap/claude-code
 
 This installs the `claude` binary.
 
-## Shell wrapper (optional)
+## Shell wrapper
 
-To make `brew upgrade claude-code` resolve to this tap instead of the official one, add this to your `~/.zshrc` or `~/.bashrc`:
+To make `brew upgrade claude-code` resolve to this tap, install [claude-plus](claude-plus.md):
 
 ```bash
-source "$(brew --prefix)/Library/Taps/jackspirou/homebrew-tap/etc/claude-brew.sh"
+brew install --HEAD jackspirou/tap/claude-plus
+claude-setup
 ```
 
-Then `brew upgrade claude-code`, `brew install claude-code`, `brew info claude-code` all route through this tap.
+This also enables auto mode, channel switching, and the brew routing wrapper.
 
 ## Channel switching
 
-The `claude-channel` script manages which version and channel you're on.
-
-### Setup
-
-The script is included in the tap. Symlink it to your PATH:
-
-```bash
-ln -sf "$(brew --prefix)/Library/Taps/jackspirou/homebrew-tap/bin/claude-channel" "$(brew --prefix)/bin/claude-channel"
-```
+The `claude-channel` command is installed by the `claude-plus` formula.
 
 ### Commands
 
@@ -123,14 +116,9 @@ This checks the livecheck URL for your tracked channel (latest or stable) and up
 
 ## Auto mode (4.5/4.6 on Max plan)
 
-Auto mode officially requires Opus 4.7 on Max plan. To enable it with 4.5/4.6 models:
+Auto mode officially requires Opus 4.7 on Max plan. To enable it with 4.5/4.6 models, install `claude-plus` (see above) which handles auto mode, channel switching, and shell configuration in one step.
 
-```bash
-brew install --HEAD jackspirou/tap/claude-automode
-echo "alias claude='claude-auto'" >> ~/.zshrc
-```
-
-See [claude-automode docs](claude-automode.md) for details.
+See [claude-plus docs](claude-plus.md) for details.
 
 ## Uninstall
 
@@ -139,4 +127,4 @@ brew uninstall claude-code
 brew untap jackspirou/tap
 ```
 
-Remove the `source` line from your shell profile and the `claude-channel` symlink if you added them.
+If you have `claude-plus` installed, also run `claude-setup undo`.

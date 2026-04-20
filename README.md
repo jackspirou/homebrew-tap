@@ -6,11 +6,19 @@ Personal [Homebrew](https://brew.sh) tap by [@jackspirou](https://github.com/jac
 brew tap jackspirou/tap
 ```
 
+## Quick Start (Claude Code)
+
+```bash
+brew install jackspirou/tap/claude-code
+brew install --HEAD jackspirou/tap/claude-plus
+claude-setup
+```
+
 ## Formulae
 
 | Formula | Description | Docs |
 |---------|-------------|------|
-| [claude-automode](Formula/claude-automode.rb) | Enables auto mode for Claude Code with 4.5/4.6 models on Max plan | [README](docs/claude-automode.md) |
+| [claude-plus](Formula/claude-plus.rb) | Auto mode, channel switching, and setup tools for Claude Code | [README](docs/claude-plus.md) |
 
 ## Casks
 

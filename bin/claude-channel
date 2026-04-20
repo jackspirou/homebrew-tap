@@ -8,9 +8,7 @@ TAP_CASK="jackspirou/tap/claude-code"
 BREW_TAP_DIR="$(brew --repository)/Library/Taps/jackspirou/homebrew-tap"
 CASK_FILE="${BREW_TAP_DIR}/Casks/claude-code.rb"
 
-# Source repo for pushing to GitHub
-SOURCE_REPO="$(cd "$(dirname "$(realpath "$0")")/.." && pwd)"
-SOURCE_CASK="${SOURCE_REPO}/Casks/claude-code.rb"
+# Sync uses the brew tap dir directly (it's a git clone)
 
 if [[ ! -f "$CASK_FILE" ]]; then
   echo "error: tap not found — run: brew tap jackspirou/tap" >&2
@@ -64,7 +62,6 @@ set_version() {
   fi
 
   sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$CASK_FILE"
-  [[ -f "$SOURCE_CASK" ]] && sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$SOURCE_CASK"
   echo "Cask version set to ${ver}"
 }
 
@@ -76,7 +73,6 @@ set_livecheck() {
     exit 1
   fi
   sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
-  [[ -f "$SOURCE_CASK" ]] && sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$SOURCE_CASK"
   echo "Livecheck now tracks: ${channel}"
 }
 
@@ -87,17 +83,12 @@ reinstall() {
 }
 
 sync_to_github() {
-  if [[ ! -f "$SOURCE_CASK" ]]; then
-    echo "warning: source repo not found, skipping GitHub sync" >&2
-    return
-  fi
-  cp "$CASK_FILE" "$SOURCE_CASK"
-  cd "$SOURCE_REPO"
+  cd "$BREW_TAP_DIR"
   if git diff --quiet Casks/claude-code.rb 2>/dev/null; then
     echo "GitHub repo already in sync."
   else
     git add Casks/claude-code.rb
-    git commit -m "claude-code $(grep '^ *version "' Casks/claude-code.rb | sed 's/.*version "//;s/".*//')"
+    git commit -m "claude-code $(current_cask_version)"
     git push origin main
     echo "Pushed to GitHub."
   fi

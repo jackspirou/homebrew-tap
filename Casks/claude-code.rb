@@ -12,12 +12,10 @@ cask "claude-code" do
   homepage "https://www.anthropic.com/claude-code"
 
   caveats <<~EOS
-    For auto mode with 4.5/4.6 models on Max plan:
+    For auto mode, channel switching, and shell setup:
 
-      brew install --HEAD jackspirou/tap/claude-automode
-      echo "alias claude='claude-auto'" >> ~/.zshrc
-
-    Then use `claude` normally with auto mode enabled.
+      brew install --HEAD jackspirou/tap/claude-plus
+      claude-setup
   EOS
 
   livecheck do
