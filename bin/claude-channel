@@ -2,39 +2,40 @@
 set -euo pipefail
 
 DIST_BASE="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+GITHUB_REPO="anthropics/claude-code"
 TAP_CASK="jackspirou/tap/claude-code"
 
-# Brew tap clone is the source of truth for brew commands
 BREW_TAP_DIR="$(brew --repository)/Library/Taps/jackspirou/homebrew-tap"
 CASK_FILE="${BREW_TAP_DIR}/Casks/claude-code.rb"
 
-# Sync uses the brew tap dir directly (it's a git clone)
-
 if [[ ! -f "$CASK_FILE" ]]; then
-  echo "error: tap not found — run: brew tap jackspirou/tap" >&2
+  echo "error: tap not found — run: brew install jackspirou/tap/claude-code" >&2
   exit 1
 fi
 
 usage() {
   cat <<EOF
-Usage: claude-channel <command> [args]
+Usage: claude-channel [command] [args]
 
 Commands:
+  (none)          Show current status (same as status)
+  status          Show installed version, channel, and available updates
   latest          Switch to the latest channel (bleeding edge)
   stable          Switch to the stable channel
-  version <ver>   Pin to a specific version (e.g. 2.1.111)
-  status          Show current version, stable, and latest
-  livecheck <ch>  Set livecheck to track a channel (latest|stable)
-  sync            Push current cask state to GitHub
+  pin <ver>       Freeze to a specific version (e.g. 2.1.105)
+  upgrade         Update to the newest version of your current channel
+  inspect [ver]   Show changelog for a version (default: installed)
 
 Examples:
+  claude-channel
   claude-channel latest
-  claude-channel stable
-  claude-channel version 2.1.105
-  claude-channel livecheck stable
+  claude-channel pin 2.1.105
+  claude-channel inspect 2.1.114
 EOF
   exit 1
 }
+
+# --- helpers ---
 
 resolve_channel() {
   local channel="$1"
@@ -44,36 +45,46 @@ resolve_channel() {
   }
 }
 
-current_cask_version() {
+installed_version() {
+  claude --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "not installed"
+}
+
+cask_version() {
   grep '^ *version "' "$CASK_FILE" | head -1 | sed 's/.*version "//;s/".*//'
 }
 
-current_livecheck_channel() {
+cask_livecheck_channel() {
   grep -oE 'claude-code-releases/(latest|stable)' "$CASK_FILE" | tail -1 | sed 's|.*releases/||'
 }
 
-# Update version in both brew tap clone and source repo
-set_version() {
+current_channel() {
+  local installed="$1" latest_ver="$2" stable_ver="$3" livecheck="$4"
+  if [[ "$installed" == "$latest_ver" && "$livecheck" == "latest" ]]; then
+    echo "latest"
+  elif [[ "$installed" == "$stable_ver" && "$livecheck" == "stable" ]]; then
+    echo "stable"
+  elif [[ "$livecheck" == "latest" ]]; then
+    echo "latest (behind)"
+  elif [[ "$livecheck" == "stable" ]]; then
+    echo "stable (behind)"
+  else
+    echo "pinned"
+  fi
+}
+
+set_cask_version() {
   local ver="$1"
   local check_url="${DIST_BASE}/${ver}/darwin-arm64/claude"
   if ! curl -sfI "$check_url" > /dev/null 2>&1; then
     echo "error: version ${ver} not found at distribution URL" >&2
     exit 1
   fi
-
   sed -i '' "s|^ *version \".*\"|  version \"${ver}\"|" "$CASK_FILE"
-  echo "Cask version set to ${ver}"
 }
 
-# Update livecheck channel in both brew tap clone and source repo
-set_livecheck() {
+set_cask_livecheck() {
   local channel="$1"
-  if [[ "$channel" != "latest" && "$channel" != "stable" ]]; then
-    echo "error: channel must be 'latest' or 'stable'" >&2
-    exit 1
-  fi
   sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
-  echo "Livecheck now tracks: ${channel}"
 }
 
 reinstall() {
@@ -82,76 +93,138 @@ reinstall() {
   brew reinstall "$TAP_CASK"
 }
 
-sync_to_github() {
+sync() {
   cd "$BREW_TAP_DIR"
-  if git diff --quiet Casks/claude-code.rb 2>/dev/null; then
-    echo "GitHub repo already in sync."
-  else
+  if ! git diff --quiet Casks/claude-code.rb 2>/dev/null; then
     git add Casks/claude-code.rb
-    git commit -m "claude-code $(current_cask_version)"
-    git push origin main
-    echo "Pushed to GitHub."
+    git commit -m "claude-code $(cask_version)" 2>/dev/null
+    git push origin main 2>/dev/null && echo "Synced to GitHub." || echo "warning: could not sync to GitHub (offline?)" >&2
   fi
 }
 
-show_status() {
-  local current latest_ver stable_ver livecheck_ch installed_ver
-  current="$(current_cask_version)"
+# --- commands ---
+
+cmd_status() {
+  local installed latest_ver stable_ver livecheck channel
+  installed="$(installed_version)"
   latest_ver="$(resolve_channel latest)"
   stable_ver="$(resolve_channel stable)"
-  livecheck_ch="$(current_livecheck_channel)"
-  installed_ver="$(claude --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo 'not installed')"
+  livecheck="$(cask_livecheck_channel)"
+  channel="$(current_channel "$installed" "$latest_ver" "$stable_ver" "$livecheck")"
 
-  echo "Installed binary:        ${installed_ver}"
-  echo "Cask version:            ${current}"
-  echo "Livecheck tracks:        ${livecheck_ch}"
-  echo ""
-  echo "Channel versions:"
-  echo "  latest:  ${latest_ver}"
-  echo "  stable:  ${stable_ver}"
+  echo "Claude Code"
+  echo "==========="
+  echo "  installed:  ${installed}"
+  echo "  channel:    ${channel}"
+  echo "  latest:     ${latest_ver}"
+  echo "  stable:     ${stable_ver}"
 
-  if [[ "$installed_ver" == "$latest_ver" ]]; then
+  # Show upgrade hint if behind
+  local target_ver=""
+  if [[ "$livecheck" == "latest" && "$installed" != "$latest_ver" ]]; then
+    target_ver="$latest_ver"
+  elif [[ "$livecheck" == "stable" && "$installed" != "$stable_ver" ]]; then
+    target_ver="$stable_ver"
+  fi
+
+  if [[ -n "$target_ver" ]]; then
     echo ""
-    echo "You are on the latest version."
-  elif [[ "$installed_ver" == "$stable_ver" ]]; then
-    echo ""
-    echo "You are on stable. Latest is ${latest_ver}."
+    echo "  Update available: ${target_ver}"
+    echo "  Run: claude-channel upgrade"
   fi
 }
 
-[[ $# -lt 1 ]] && usage
+cmd_latest() {
+  local ver
+  ver="$(resolve_channel latest)"
+  echo "Latest: ${ver}"
+  set_cask_version "$ver"
+  set_cask_livecheck "latest"
+  reinstall
+  sync
+}
 
-case "$1" in
-  latest)
-    ver="$(resolve_channel latest)"
-    echo "Latest channel resolves to: ${ver}"
-    set_version "$ver"
-    set_livecheck "latest"
-    reinstall
+cmd_stable() {
+  local ver
+  ver="$(resolve_channel stable)"
+  echo "Stable: ${ver}"
+  set_cask_version "$ver"
+  set_cask_livecheck "stable"
+  reinstall
+  sync
+}
+
+cmd_pin() {
+  local ver="$1"
+  echo "Pinning to: ${ver}"
+  set_cask_version "$ver"
+  reinstall
+  sync
+}
+
+cmd_upgrade() {
+  local livecheck installed target_ver
+  livecheck="$(cask_livecheck_channel)"
+  installed="$(installed_version)"
+  target_ver="$(resolve_channel "$livecheck")"
+
+  if [[ "$installed" == "$target_ver" ]]; then
+    echo "Already on ${livecheck}: ${installed}"
+    return
+  fi
+
+  echo "Upgrading ${livecheck}: ${installed} → ${target_ver}"
+  set_cask_version "$target_ver"
+  reinstall
+  sync
+}
+
+cmd_inspect() {
+  local ver="${1:-$(installed_version)}"
+
+  if [[ "$ver" == "not installed" ]]; then
+    echo "error: no version to inspect — provide a version number" >&2
+    exit 1
+  fi
+
+  echo "Claude Code ${ver}"
+  echo "$(printf '=%.0s' $(seq 1 $((${#ver} + 12))))"
+  echo ""
+
+  # Fetch release notes from GitHub
+  local response
+  response=$(curl -sf "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/v${ver}" 2>/dev/null) || {
+    # Try without v prefix
+    response=$(curl -sf "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${ver}" 2>/dev/null) || {
+      echo "No release notes found for ${ver}."
+      echo ""
+      echo "View on GitHub:"
+      echo "  https://github.com/${GITHUB_REPO}/releases"
+      return
+    }
+  }
+
+  local date body
+  date=$(echo "$response" | grep '"published_at"' | head -1 | sed 's/.*": "//;s/T.*//')
+  body=$(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('body','No release notes.'))" 2>/dev/null || echo "No release notes.")
+
+  echo "Released: ${date}"
+  echo ""
+  echo "$body"
+}
+
+# --- main ---
+
+case "${1:-status}" in
+  status)          cmd_status ;;
+  latest)          cmd_latest ;;
+  stable)          cmd_stable ;;
+  pin)
+    [[ $# -lt 2 ]] && { echo "error: provide a version number (e.g. claude-channel pin 2.1.105)" >&2; exit 1; }
+    cmd_pin "$2"
     ;;
-  stable)
-    ver="$(resolve_channel stable)"
-    echo "Stable channel resolves to: ${ver}"
-    set_version "$ver"
-    set_livecheck "stable"
-    reinstall
-    ;;
-  version)
-    [[ $# -lt 2 ]] && { echo "error: provide a version number" >&2; exit 1; }
-    set_version "$2"
-    reinstall
-    ;;
-  livecheck)
-    [[ $# -lt 2 ]] && { echo "error: provide a channel (latest|stable)" >&2; exit 1; }
-    set_livecheck "$2"
-    ;;
-  sync)
-    sync_to_github
-    ;;
-  status)
-    show_status
-    ;;
-  *)
-    usage
-    ;;
+  upgrade)         cmd_upgrade ;;
+  inspect)         cmd_inspect "${2:-}" ;;
+  -h|--help|help)  usage ;;
+  *)               usage ;;
 esac

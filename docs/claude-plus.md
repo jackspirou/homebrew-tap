@@ -67,11 +67,12 @@ $ claude  (via alias)
 Switch between Claude Code release channels:
 
 ```bash
-claude-channel status            # show current version and channels
+claude-channel                   # show status + available updates
 claude-channel latest            # switch to latest (bleeding edge)
 claude-channel stable            # switch to stable
-claude-channel version 2.1.105   # pin to specific version
-claude-channel sync              # push cask changes to GitHub
+claude-channel pin 2.1.105       # freeze to specific version
+claude-channel upgrade           # update to newest of current channel
+claude-channel inspect 2.1.114   # show changelog for a version
 ```
 
 See [claude-code docs](claude-code.md) for full channel documentation.

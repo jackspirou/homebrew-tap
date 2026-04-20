@@ -41,23 +41,21 @@ See [claude-plus docs](claude-plus.md) for details.
 The `claude-channel` command is installed by `claude-plus`.
 
 ```bash
-claude-channel status            # show current version and channels
+claude-channel                   # show status + available updates
 claude-channel latest            # switch to latest (bleeding edge)
 claude-channel stable            # switch to stable
-claude-channel version 2.1.105   # pin to specific version
-claude-channel livecheck stable  # change what brew upgrade tracks
-claude-channel sync              # push cask changes to GitHub
+claude-channel pin 2.1.105       # freeze to specific version
+claude-channel upgrade           # update to newest of current channel
+claude-channel inspect 2.1.114   # show changelog for a version
 ```
 
-Each channel command resolves the version, updates the cask, and reinstalls:
+Switching channels resolves the version, updates the cask, reinstalls, and syncs to GitHub:
 
 ```bash
 $ claude-channel latest
-Latest channel resolves to: 2.1.114
-Cask version set to 2.1.114
-Livecheck now tracks: latest
-
+Latest: 2.1.116
 Reinstalling...
+Synced to GitHub.
 ```
 
 ### Pinning a version
@@ -65,14 +63,22 @@ Reinstalling...
 Pin to any version published to Anthropic's CDN:
 
 ```bash
-claude-channel version 2.1.100
+claude-channel pin 2.1.100
 ```
 
-Pinning does not change the livecheck channel, so `brew upgrade` will still move you forward. To freeze completely:
+### Inspecting a version
+
+View the changelog for any release:
 
 ```bash
-claude-channel version 2.1.100
-claude-channel livecheck stable
+$ claude-channel inspect 2.1.114
+Claude Code 2.1.114
+===================
+
+Released: 2026-04-18
+
+## What's changed
+- Fixed a crash in the permission dialog when an agent teams teammate...
 ```
 
 ## Upgrading
