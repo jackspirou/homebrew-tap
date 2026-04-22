@@ -6,14 +6,19 @@ class ClaudePlus < Formula
 
   depends_on "fswatch"
   depends_on "jq"
+  depends_on "node"
+  depends_on "openssl"
 
   def install
     fswatch_bin = Formula["fswatch"].opt_bin/"fswatch"
     jq_bin = Formula["jq"].opt_bin/"jq"
+    node_bin = Formula["node"].opt_bin/"node"
+    openssl_bin = Formula["openssl"].opt_bin/"openssl"
 
-    # Install claude-channel and claude-brew.sh from source
+    # Install claude-channel, claude-brew.sh, and automode proxy from source
     bin.install "bin/claude-channel"
     (share/"claude-plus").install "etc/claude-brew.sh"
+    (share/"claude-plus").install "etc/automode-proxy.js"
 
     # Generate daemon script with full dependency paths
     (bin/"claude-automode-daemon").write <<~BASH
@@ -56,13 +61,52 @@ class ClaudePlus < Formula
     BASH
     chmod 0755, bin/"claude-automode-daemon"
 
-    # Generate wrapper that ensures watcher + runs claude with auto mode
+    # Generate proxy cert setup script
+    proxy_js = opt_share/"claude-plus/automode-proxy.js"
+    (bin/"claude-automode-proxy").write <<~BASH
+      #!/bin/bash
+      CERT_DIR="$HOME/.claude/automode-proxy"
+      KEY="$CERT_DIR/key.pem"
+      CERT="$CERT_DIR/cert.pem"
+      PIDFILE="$CERT_DIR/proxy.pid"
+      PORT="${AUTOMODE_PROXY_PORT:-18019}"
+
+      # Generate certs if missing
+      if [ ! -f "$KEY" ] || [ ! -f "$CERT" ]; then
+          mkdir -p "$CERT_DIR"
+          "#{openssl_bin}" req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" \\
+              -days 3650 -nodes -subj "/CN=api.anthropic.com" \\
+              -addext "subjectAltName=DNS:api.anthropic.com" 2>/dev/null
+      fi
+
+      # Start proxy if not running
+      if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+          exit 0
+      fi
+      AUTOMODE_PROXY_KEY="$KEY" AUTOMODE_PROXY_CERT="$CERT" AUTOMODE_PROXY_PORT="$PORT" \\
+          "#{node_bin}" "#{proxy_js}" &
+      echo $! > "$PIDFILE"
+      sleep 0.3
+    BASH
+    chmod 0755, bin/"claude-automode-proxy"
+
+    # Generate wrapper that ensures proxy + watcher + runs claude with auto mode
     (bin/"claude-auto").write <<~BASH
       #!/bin/bash
+      PROXY_PORT="${AUTOMODE_PROXY_PORT:-18019}"
+
+      # Start config patcher
       if ! pgrep -qf claude-automode-daemon; then
           #{opt_bin}/claude-automode-daemon --once
           brew services start claude-plus 2>/dev/null &
       fi
+
+      # Start intercepting proxy
+      #{opt_bin}/claude-automode-proxy
+
+      # Run claude through the proxy with TLS override for the intercepted connection
+      NODE_TLS_REJECT_UNAUTHORIZED=0 \\
+      HTTPS_PROXY="http://127.0.0.1:$PROXY_PORT" \\
       exec claude --permission-mode auto "$@"
     BASH
     chmod 0755, bin/"claude-auto"
@@ -119,6 +163,14 @@ class ClaudePlus < Formula
               echo "  watcher:   stopped"
           fi
 
+          # Proxy
+          local pidfile="$HOME/.claude/automode-proxy/proxy.pid"
+          if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+              echo "  proxy:     running (pid $(cat "$pidfile"))"
+          else
+              echo "  proxy:     stopped"
+          fi
+
           # Shell config
           if grep -q "$MARKER" "$SHELL_RC" 2>/dev/null; then
               echo "  shell:     configured ($(basename "$SHELL_RC"))"
@@ -146,6 +198,10 @@ class ClaudePlus < Formula
           # Patch config
           #{opt_bin}/claude-automode-daemon --once 2>/dev/null
           echo "  ✓ Auto mode patched"
+
+          # Start proxy
+          #{opt_bin}/claude-automode-proxy
+          echo "  ✓ Proxy started"
 
           # Start watcher
           brew services start claude-plus 2>/dev/null || true
@@ -186,6 +242,14 @@ SHELL
           brew services stop claude-plus 2>/dev/null || true
           echo "  ✓ Watcher stopped"
 
+          # Stop proxy
+          local pidfile="$HOME/.claude/automode-proxy/proxy.pid"
+          if [ -f "$pidfile" ]; then
+              kill "$(cat "$pidfile")" 2>/dev/null || true
+              rm -f "$pidfile"
+          fi
+          echo "  ✓ Proxy stopped"
+
           # Remove shell config
           if grep -q "$MARKER" "$SHELL_RC" 2>/dev/null; then
               sed -i '' '/^# claude-plus/,/^# claude-plus/d' "$SHELL_RC"
@@ -216,6 +280,7 @@ SHELL
     (bin/"claude-setup").chmod 0755
     (bin/"claude-auto").chmod 0755
     (bin/"claude-automode-daemon").chmod 0755
+    (bin/"claude-automode-proxy").chmod 0755
   end
 
   def caveats
