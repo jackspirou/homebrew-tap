@@ -46,8 +46,16 @@ class ClaudePlus < Formula
       PROXY_PORT="${AUTOMODE_PROXY_PORT:-18019}"
       PIDFILE="$HOME/.claude/automode-proxy/proxy.pid"
 
-      # Start proxy if not already running
-      if ! { [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }; then
+      # Start proxy if not already running (check pidfile, pgrep, then port)
+      proxy_running=false
+      if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+          proxy_running=true
+      elif pgrep -qf "automode-proxy.js" 2>/dev/null; then
+          proxy_running=true
+      elif lsof -iTCP:"$PROXY_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+          proxy_running=true
+      fi
+      if [ "$proxy_running" = false ]; then
           #{opt_bin}/claude-automode-proxy &
           PROXY_PID=$!
           mkdir -p "$(dirname "$PIDFILE")"
