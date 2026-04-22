@@ -19,13 +19,13 @@ That's it. Use `claude` for auto mode, `\claude` for normal mode.
 | `claude-setup` | One-time configuration (idempotent, reversible) |
 | `claude-auto` | Wrapper that runs claude with auto mode |
 | `claude-channel` | Switch between latest/stable channels, pin versions |
-| `claude-automode-daemon` | Background watcher that keeps auto mode patched |
+| `claude-automode-proxy` | HTTPS proxy that patches GrowthBook feature flags |
 
 ## Auto Mode
 
 ### Why?
 
-On Max plan, auto mode officially requires Opus 4.7. This formula patches the GrowthBook feature flags to enable it with older models.
+Claude Code evaluates feature flags server-side via GrowthBook `remoteEval`. The server returns `tengu_auto_mode_config.enabled = "disabled"` for some accounts, blocking auto mode regardless of local config. This formula runs a lightweight HTTPS proxy that intercepts those responses and patches the flag to `"enabled"`.
 
 ### Supported models
 
@@ -48,19 +48,25 @@ $ claude  (via alias)
 ┌─────────────────────────────────────────────────────┐
 │  claude-auto wrapper:                               │
 │                                                     │
-│  if watcher not running:                            │
-│    1. Patch config (sync)    ← guarantees ready     │
-│    2. Start watcher (async)  ← for future refreshes │
-│                                                     │
-│  3. exec claude --permission-mode auto              │
+│  1. Start proxy if not running                      │
+│  2. exec claude with HTTPS_PROXY pointed at proxy   │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│  Background watcher (started automatically)         │
-│  • Re-patches when GrowthBook refreshes (6 hrs)    │
-│  • Keeps config patched for IDE/direct invocations  │
+│  automode-proxy (HTTPS interception):               │
+│  • Intercepts api.anthropic.com /api/eval/ responses│
+│  • Patches tengu_auto_mode_config.enabled="enabled" │
+│  • Patches ccr_auto_permission_mode=true            │
+│  • Passes all other API traffic through unmodified  │
 └─────────────────────────────────────────────────────┘
 ```
+
+### Security
+
+- **No macOS security settings are modified** — no keychain changes, no system trust store edits
+- `NODE_TLS_REJECT_UNAUTHORIZED=0` is set only on the `claude` process, not system-wide
+- Self-signed certs are stored locally in `~/.claude/automode-proxy/`
+- The proxy binds to `127.0.0.1` only (not externally accessible)
 
 ## Channel Switching
 
@@ -87,24 +93,23 @@ claude-setup undo     # revert all changes
 ```
 
 What `claude-setup` does:
-1. Patches `~/.claude.json` for auto mode
-2. Starts the background watcher service
-3. Adds `alias claude='claude-auto'` to shell config
-4. Sources brew wrapper for `brew upgrade claude-code` routing
+1. Starts the auto mode proxy via `brew services`
+2. Adds `alias claude='claude-auto'` to shell config
+3. Sources brew wrapper for `brew upgrade claude-code` routing
 
 ## Usage
 
 | Command | Mode | Notes |
 |---------|------|-------|
-| `claude` | Auto | Via alias, starts watcher if needed |
+| `claude` | Auto | Via alias, starts proxy if needed |
 | `\claude` | Normal | Bypasses alias, runs claude directly |
 | `claude-auto` | Auto | Direct wrapper call |
 
 ## Manual Control
 
 ```bash
-brew services start claude-plus   # start watcher
-brew services stop claude-plus    # stop watcher
+brew services start claude-plus   # start proxy
+brew services stop claude-plus    # stop proxy
 brew services list | grep claude  # check status
 ```
 
@@ -120,25 +125,6 @@ cat /opt/homebrew/var/log/claude-plus.log
 claude-setup undo
 brew uninstall claude-plus
 ```
-
-## How the patch works
-
-Modifies `~/.claude.json`:
-
-```json
-{
-  "cachedGrowthBookFeatures": {
-    "tengu_auto_mode_config": {
-      "enabled": "enabled",
-      "allowModels": ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5",
-                      "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-6"]
-    }
-  }
-}
-```
-
-- `enabled` unlocks auto mode for supported model families
-- `allowModels` bypasses the hardcoded model check for 4.5/4.6 families
 
 ## Limitations
 
