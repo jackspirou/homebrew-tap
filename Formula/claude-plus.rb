@@ -30,13 +30,19 @@ class ClaudePlus < Formula
           [ "$current_enabled" != "enabled" ] && needs_patch=true
           current_models=$("$JQ" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels // empty' "$CLAUDE_CONFIG" 2>/dev/null)
           [ -z "$current_models" ] || [ "$current_models" = "null" ] && needs_patch=true
+          current_ccr=$("$JQ" -r '.cachedGrowthBookFeatures.ccr_auto_permission_mode // false' "$CLAUDE_CONFIG" 2>/dev/null)
+          [ "$current_ccr" != "true" ] && needs_patch=true
+          current_sub=$("$JQ" -r '.hasAvailableSubscription // false' "$CLAUDE_CONFIG" 2>/dev/null)
+          [ "$current_sub" != "true" ] && needs_patch=true
           if [ "$needs_patch" = true ]; then
               "$JQ" --argjson models "$ALLOWED_MODELS" '
                   .cachedGrowthBookFeatures.tengu_auto_mode_config.enabled = "enabled" |
-                  .cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels = $models
+                  .cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels = $models |
+                  .cachedGrowthBookFeatures.ccr_auto_permission_mode = true |
+                  .hasAvailableSubscription = true
               ' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" 2>/dev/null && \\
               mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG" && \\
-              echo "[$(date '+%H:%M:%S')] Patched auto mode: enabled + allowModels for 4.5/4.6 families"
+              echo "[$(date '+%H:%M:%S')] Patched auto mode: enabled + allowModels + ccr_auto + subscription"
           fi
       }
 
@@ -97,7 +103,11 @@ class ClaudePlus < Formula
           if [ -f "$config" ]; then
               local enabled=$("$jq" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$config" 2>/dev/null)
               local models=$("$jq" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.allowModels | length // 0' "$config" 2>/dev/null || echo "0")
+              local ccr_auto=$("$jq" -r '.cachedGrowthBookFeatures.ccr_auto_permission_mode // false' "$config" 2>/dev/null)
+              local has_sub=$("$jq" -r '.hasAvailableSubscription // false' "$config" 2>/dev/null)
               echo "  automode:  $enabled ($models models)"
+              echo "  ccr_auto:  $ccr_auto"
+              echo "  subscript: $has_sub"
           else
               echo "  automode:  no config found"
           fi
