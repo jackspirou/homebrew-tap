@@ -104,8 +104,14 @@ class ClaudePlus < Formula
 
           # Proxy
           local pidfile="$HOME/.claude/automode-proxy/proxy.pid"
+          local proxy_pid=""
           if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-              echo "  proxy:    running (pid $(cat "$pidfile"))"
+              proxy_pid=$(cat "$pidfile")
+          else
+              proxy_pid=$(pgrep -f "automode-proxy.js" 2>/dev/null | head -1)
+          fi
+          if [ -n "$proxy_pid" ]; then
+              echo "  proxy:    running (pid $proxy_pid)"
           else
               echo "  proxy:    stopped"
           fi
