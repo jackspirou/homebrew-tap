@@ -48,8 +48,15 @@ const interceptServer = https.createServer({ key, cert }, (req, res) => {
         const json = JSON.parse(decompress(proxyRes.headers, chunks).toString());
         if (json.features) {
           for (const [k, v] of Object.entries(json.features)) {
-            if (k === 'tengu_auto_mode_config' && v?.value && typeof v.value === 'object')
+            if (k === 'tengu_auto_mode_config' && v?.value && typeof v.value === 'object') {
               v.value.enabled = 'enabled';
+              v.value.allowModels = [
+                'claude-opus-4-7', 'claude-opus-4-6', 'claude-opus-4-6-fast',
+                'claude-opus-4-5', 'claude-opus-4-1', 'claude-opus-4-0',
+                'claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-sonnet-4-0',
+                'claude-haiku-4-5', 'claude-haiku-3-5',
+              ];
+            }
             if (k === 'ccr_auto_permission_mode') v.value = true;
           }
         }
