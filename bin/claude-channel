@@ -87,7 +87,8 @@ set_cask_version() {
 
 set_cask_livecheck() {
   local channel="$1"
-  sed -i '' "s|claude-code-releases/\(latest\|stable\)\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
+  sed -i '' "s|claude-code-releases/latest\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
+  sed -i '' "s|claude-code-releases/stable\"|claude-code-releases/${channel}\"|" "$CASK_FILE"
 }
 
 reinstall() {
@@ -138,9 +139,23 @@ cmd_status() {
 }
 
 cmd_latest() {
-  local ver
+  local ver installed livecheck
   ver="$(resolve_channel latest)"
-  echo "Latest: ${ver}"
+  installed="$(installed_version)"
+  livecheck="$(cask_livecheck_channel)"
+
+  if [[ "$livecheck" == "latest" && "$installed" == "$ver" ]]; then
+    echo "Already on latest: ${installed}"
+    return
+  fi
+
+  if [[ "$livecheck" != "latest" ]]; then
+    echo "Switching channel: ${livecheck} → latest"
+  fi
+  if [[ "$installed" != "$ver" ]]; then
+    echo "Upgrading: ${installed} → ${ver}"
+  fi
+
   set_cask_version "$ver"
   set_cask_livecheck "latest"
   reinstall
@@ -148,9 +163,25 @@ cmd_latest() {
 }
 
 cmd_stable() {
-  local ver
+  local ver installed livecheck
   ver="$(resolve_channel stable)"
-  echo "Stable: ${ver}"
+  installed="$(installed_version)"
+  livecheck="$(cask_livecheck_channel)"
+
+  if [[ "$livecheck" == "stable" && "$installed" == "$ver" ]]; then
+    echo "Already on stable: ${installed}"
+    return
+  fi
+
+  if [[ "$livecheck" != "stable" ]]; then
+    echo "Switching channel: ${livecheck} → stable"
+  fi
+  if [[ "$installed" != "$ver" ]]; then
+    echo "Downgrading: ${installed} → ${ver}"
+  else
+    echo "Stable: ${ver}"
+  fi
+
   set_cask_version "$ver"
   set_cask_livecheck "stable"
   reinstall
