@@ -116,20 +116,26 @@ cmd_status() {
   livecheck="$(cask_livecheck_channel)"
   channel="$(current_channel "$installed" "$latest_ver" "$stable_ver" "$livecheck")"
 
-  echo "Claude Code"
-  echo "==========="
-  echo "  installed:  ${installed}"
-  echo "  channel:    ${channel}"
-  echo "  latest:     ${latest_ver}"
-  echo "  stable:     ${stable_ver}"
-
-  # Show upgrade hint if behind
   local target_ver=""
   if [[ "$livecheck" == "latest" && "$installed" != "$latest_ver" ]]; then
     target_ver="$latest_ver"
   elif [[ "$livecheck" == "stable" && "$installed" != "$stable_ver" ]]; then
     target_ver="$stable_ver"
   fi
+
+  local installed_label="${installed}"
+  if [[ -n "$target_ver" ]]; then
+    installed_label="${installed} (behind)"
+  else
+    installed_label="${installed} (up to date)"
+  fi
+
+  echo "Claude Code"
+  echo "==========="
+  echo "  installed:  ${installed_label}"
+  echo "  channel:    ${channel}"
+  echo "  latest:     ${latest_ver}"
+  echo "  stable:     ${stable_ver}"
 
   if [[ -n "$target_ver" ]]; then
     echo ""
