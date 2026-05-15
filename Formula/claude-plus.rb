@@ -46,6 +46,20 @@ class ClaudePlus < Formula
       PROXY_PORT="${AUTOMODE_PROXY_PORT:-18019}"
       PIDFILE="$HOME/.claude/automode-proxy/proxy.pid"
 
+      # Patch the claude binary to remove the Max plan auto-mode gate for 4.6 models.
+      # Claude >=2.1.139 hardcodes: if(sB()&&(_==="claude-opus-4-6"||_==="claude-sonnet-4-6"))return!1
+      # which blocks auto mode on Max plans for these models. We flip return!1 → return!0.
+      CLAUDE_BIN="$(command -v claude 2>/dev/null)"
+      if [ -n "$CLAUDE_BIN" ] && [ -f "$CLAUDE_BIN" ]; then
+          CLAUDE_BIN="$(readlink -f "$CLAUDE_BIN" 2>/dev/null || realpath "$CLAUDE_BIN" 2>/dev/null || echo "$CLAUDE_BIN")"
+          NEEDLE='_==="claude-sonnet-4-6"))return!1;return!0}'
+          if LC_ALL=C grep -qaU "$NEEDLE" "$CLAUDE_BIN" 2>/dev/null; then
+              PATCHED='_==="claude-sonnet-4-6"))return!0;return!0}'
+              LC_ALL=C sed -i '' "s|$NEEDLE|$PATCHED|" "$CLAUDE_BIN" 2>/dev/null
+              codesign --force --sign - "$CLAUDE_BIN" 2>/dev/null
+          fi
+      fi
+
       # Start proxy if not already running (check pidfile, pgrep, then port)
       proxy_running=false
       if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then

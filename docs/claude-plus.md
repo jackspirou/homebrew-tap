@@ -25,7 +25,10 @@ That's it. Use `claude` for auto mode, `\claude` for normal mode.
 
 ### Why?
 
-Claude Code evaluates feature flags server-side via GrowthBook `remoteEval`. The server returns `tengu_auto_mode_config.enabled = "disabled"` for some accounts, blocking auto mode regardless of local config. This formula runs a lightweight HTTPS proxy that intercepts those responses and patches the flag to `"enabled"`.
+Claude Code gates auto mode in two ways:
+
+1. **Server-side feature flags** — GrowthBook `remoteEval` returns `tengu_auto_mode_config.enabled = "disabled"` for some accounts. The HTTPS proxy intercepts these responses and patches the flag to `"enabled"`.
+2. **Client-side plan check** — Since v2.1.139, the compiled binary hardcodes `if (isMaxPlan && model ∈ {opus-4-6, sonnet-4-6}) return false` in the `modelSupported` function, blocking auto mode for these models on Max plans regardless of feature flags. The `claude-auto` wrapper binary-patches this check on each launch.
 
 ### Supported models
 
@@ -48,8 +51,9 @@ $ claude  (via alias)
 ┌─────────────────────────────────────────────────────┐
 │  claude-auto wrapper:                               │
 │                                                     │
-│  1. Start proxy if not running                      │
-│  2. exec claude with HTTPS_PROXY pointed at proxy   │
+│  1. Patch binary (Max plan gate → noop, idempotent) │
+│  2. Start proxy if not running                      │
+│  3. exec claude with HTTPS_PROXY pointed at proxy   │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
