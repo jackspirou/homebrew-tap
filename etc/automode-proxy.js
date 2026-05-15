@@ -50,11 +50,19 @@ const interceptServer = https.createServer({ key, cert }, (req, res) => {
           for (const [k, v] of Object.entries(json.features)) {
             if (k === 'tengu_auto_mode_config' && v?.value && typeof v.value === 'object') {
               v.value.enabled = 'enabled';
+              v.value.disableFastMode = false;
               v.value.allowModels = [
-                'claude-opus-4-7', 'claude-opus-4-6', 'claude-opus-4-6-fast',
-                'claude-opus-4-5', 'claude-opus-4-1', 'claude-opus-4-0',
-                'claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-sonnet-4-0',
-                'claude-haiku-4-5', 'claude-haiku-3-5',
+                'claude-opus-4-7',
+                'claude-opus-4-6', 'claude-opus-4-6-fast', 'claude-opus-4-6-20251101',
+                'claude-opus-4-5', 'claude-opus-4-5-20251101',
+                'claude-opus-4-1', 'claude-opus-4-1-20250805',
+                'claude-opus-4-0', 'claude-opus-4', 'claude-opus-4-20250514',
+                'claude-sonnet-4-6', 'claude-sonnet-4-6-20251114',
+                'claude-sonnet-4-5', 'claude-sonnet-4-5-20250929',
+                'claude-sonnet-4-0', 'claude-sonnet-4', 'claude-sonnet-4-20250514',
+                'claude-sonnet-3-7',
+                'claude-haiku-4-5', 'claude-haiku-4-5-20251001', 'claude-haiku-4',
+                'claude-haiku-3-5',
               ];
             }
             if (k === 'ccr_auto_permission_mode') v.value = true;
@@ -75,7 +83,7 @@ const interceptServer = https.createServer({ key, cert }, (req, res) => {
       }
     });
   });
-  proxyReq.on('error', () => { res.writeHead(502); res.end(); });
+  proxyReq.on('error', () => { if (!res.headersSent) { res.writeHead(502); } res.end(); });
   req.pipe(proxyReq);
 });
 
