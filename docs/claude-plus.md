@@ -34,6 +34,7 @@ Claude Code gates auto mode in two ways:
 
 | Model | Native Auto Mode | With This Patch |
 |-------|------------------|-----------------|
+| claude-opus-4-8 | Max, Team, Enterprise | (not needed) |
 | claude-opus-4-7 | Max, Team, Enterprise | (not needed) |
 | claude-opus-4-6 | Team, Enterprise only | **Max** |
 | claude-sonnet-4-6 | Team, Enterprise only | **Max** |
@@ -41,6 +42,8 @@ Claude Code gates auto mode in two ways:
 | claude-opus-4-5 | Not available | **Max** |
 | claude-sonnet-4-5 | Not available | **Max** |
 | claude-haiku-4-5 | Not available | **Max** |
+
+The proxy unions Anthropic's server-returned `allowModels` with the floor above, so any model Anthropic ships server-side stays enabled — the table is a known floor, not a closed list.
 
 ### How it works
 
