@@ -33,19 +33,19 @@ This tap tracks `latest` by default. The official Homebrew cask tracks `stable`.
 
 ## Why two packages?
 
-Homebrew requires a [Cask](https://docs.brew.sh/Cask-Cookbook) to download pre-built binaries and a [Formula](https://docs.brew.sh/Formula-Cookbook) to generate scripts and run services. These can't be combined into one package.
+Homebrew requires a [Cask](https://docs.brew.sh/Cask-Cookbook) to download pre-built binaries and a [Formula](https://docs.brew.sh/Formula-Cookbook) to generate scripts. These cannot be combined into one package.
 
 | Package | Type | What it does |
 |---------|------|-------------|
 | [claude-code](Casks/claude-code.rb) | Cask | Downloads the `claude` binary from Anthropic's CDN |
-| [claude-plus](Formula/claude-plus.rb) | Formula | Auto mode, channel switching, shell setup, background watcher |
+| [claude-plus](Formula/claude-plus.rb) | Formula | Auto mode, channel switching, shell setup |
 
 `claude-setup` wires them together so they feel like one install.
 
 ## Docs
 
 - [claude-code](docs/claude-code.md) — binary installation, channel switching, version pinning
-- [claude-plus](docs/claude-plus.md) — auto mode, setup command, architecture details
+- [claude-plus](docs/claude-plus.md) — auto mode, setup command
 
 ## Other Casks
 

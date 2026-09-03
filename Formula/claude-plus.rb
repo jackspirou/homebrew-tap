@@ -4,82 +4,15 @@ class ClaudePlus < Formula
   head "https://github.com/jackspirou/homebrew-tap.git", branch: "main"
   license "MIT"
 
-  depends_on "jq"
-  depends_on "node"
-  depends_on "openssl"
-
   def install
-    jq_bin = Formula["jq"].opt_bin/"jq"
-    node_bin = Formula["node"].opt_bin/"node"
-    openssl_bin = Formula["openssl"].opt_bin/"openssl"
-
-    # Install claude-channel, claude-brew.sh, and automode proxy from source
+    # Install claude-channel and the brew wrapper from source
     bin.install "bin/claude-channel"
     (share/"claude-plus").install "etc/claude-brew.sh"
-    (share/"claude-plus").install "etc/automode-proxy.js"
 
-    # Generate proxy launcher (generates certs if needed, runs proxy in foreground)
-    proxy_js = opt_share/"claude-plus/automode-proxy.js"
-    (bin/"claude-automode-proxy").write <<~BASH
-      #!/bin/bash
-      CERT_DIR="$HOME/.claude/automode-proxy"
-      KEY="$CERT_DIR/key.pem"
-      CERT="$CERT_DIR/cert.pem"
-      PORT="${AUTOMODE_PROXY_PORT:-18019}"
-
-      # Generate certs if missing
-      if [ ! -f "$KEY" ] || [ ! -f "$CERT" ]; then
-          mkdir -p "$CERT_DIR"
-          "#{openssl_bin}" req -x509 -newkey rsa:2048 -keyout "$KEY" -out "$CERT" \\
-              -days 3650 -nodes -subj "/CN=api.anthropic.com" \\
-              -addext "subjectAltName=DNS:api.anthropic.com" 2>/dev/null
-      fi
-
-      exec env AUTOMODE_PROXY_KEY="$KEY" AUTOMODE_PROXY_CERT="$CERT" AUTOMODE_PROXY_PORT="$PORT" \\
-          "#{node_bin}" "#{proxy_js}"
-    BASH
-    chmod 0755, bin/"claude-automode-proxy"
-
-    # Generate wrapper that ensures proxy is running + runs claude with auto mode
+    # Generate wrapper that runs claude with auto mode
     (bin/"claude-auto").write <<~BASH
       #!/bin/bash
-      PROXY_PORT="${AUTOMODE_PROXY_PORT:-18019}"
-      PIDFILE="$HOME/.claude/automode-proxy/proxy.pid"
-
-      # Patch the claude binary to remove the Max plan auto-mode gate for 4.6 models.
-      # Claude >=2.1.139 hardcodes: if(sB()&&(_==="claude-opus-4-6"||_==="claude-sonnet-4-6"))return!1
-      # which blocks auto mode on Max plans for these models. We flip return!1 → return!0.
-      CLAUDE_BIN="$(command -v claude 2>/dev/null)"
-      if [ -n "$CLAUDE_BIN" ] && [ -f "$CLAUDE_BIN" ]; then
-          CLAUDE_BIN="$(readlink -f "$CLAUDE_BIN" 2>/dev/null || realpath "$CLAUDE_BIN" 2>/dev/null || echo "$CLAUDE_BIN")"
-          NEEDLE='_==="claude-sonnet-4-6"))return!1;return!0}'
-          if LC_ALL=C grep -qaU "$NEEDLE" "$CLAUDE_BIN" 2>/dev/null; then
-              PATCHED='_==="claude-sonnet-4-6"))return!0;return!0}'
-              LC_ALL=C sed -i '' "s|$NEEDLE|$PATCHED|" "$CLAUDE_BIN" 2>/dev/null
-              codesign --force --sign - "$CLAUDE_BIN" 2>/dev/null
-          fi
-      fi
-
-      # Start proxy if not already running (check pidfile, pgrep, then port)
-      proxy_running=false
-      if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-          proxy_running=true
-      elif pgrep -qf "automode-proxy.js" 2>/dev/null; then
-          proxy_running=true
-      elif lsof -iTCP:"$PROXY_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-          proxy_running=true
-      fi
-      if [ "$proxy_running" = false ]; then
-          #{opt_bin}/claude-automode-proxy &
-          PROXY_PID=$!
-          mkdir -p "$(dirname "$PIDFILE")"
-          echo "$PROXY_PID" > "$PIDFILE"
-          sleep 0.3
-      fi
-
-      # Run claude through the proxy
-      NODE_TLS_REJECT_UNAUTHORIZED=0 \\
-      HTTPS_PROXY="http://127.0.0.1:$PROXY_PORT" \\
+      # Run Claude Code with auto mode by default.
       exec claude --permission-mode auto "$@"
     BASH
     chmod 0755, bin/"claude-auto"
@@ -114,30 +47,6 @@ class ClaudePlus < Formula
               echo "  binary:   not installed"
           fi
 
-          # Auto mode config
-          local jq="#{jq_bin}"
-          local config="$HOME/.claude.json"
-          if [ -f "$config" ]; then
-              local enabled=$("$jq" -r '.cachedGrowthBookFeatures.tengu_auto_mode_config.enabled // "disabled"' "$config" 2>/dev/null)
-              echo "  automode: $enabled (cached)"
-          else
-              echo "  automode: no config found"
-          fi
-
-          # Proxy
-          local pidfile="$HOME/.claude/automode-proxy/proxy.pid"
-          local proxy_pid=""
-          if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-              proxy_pid=$(cat "$pidfile")
-          else
-              proxy_pid=$(pgrep -f "automode-proxy.js" 2>/dev/null | head -1)
-          fi
-          if [ -n "$proxy_pid" ]; then
-              echo "  proxy:    running (pid $proxy_pid)"
-          else
-              echo "  proxy:    stopped"
-          fi
-
           # Shell config
           if grep -q "$MARKER" "$SHELL_RC" 2>/dev/null; then
               echo "  shell:    configured ($(basename "$SHELL_RC"))"
@@ -162,21 +71,17 @@ class ClaudePlus < Formula
               exit 1
           fi
 
-          # Start proxy via brew service
-          brew services start claude-plus 2>/dev/null || true
-          echo "  ✓ Proxy started"
-
           # Shell config (idempotent)
           if grep -q "$MARKER" "$SHELL_RC" 2>/dev/null; then
               echo "  ✓ Shell already configured ($(basename "$SHELL_RC"))"
           else
               cat >> "$SHELL_RC" <<SHELL
 
-$MARKER — managed block, do not edit
-alias claude='claude-auto'
-source "$BREW_SH"
-$MARKER — end
-SHELL
+      $MARKER — managed block, do not edit
+      alias claude='claude-auto'
+      source "$BREW_SH"
+      $MARKER — end
+      SHELL
               echo "  ✓ Shell configured ($(basename "$SHELL_RC"))"
           fi
 
@@ -196,15 +101,6 @@ SHELL
           echo "Claude Plus Undo"
           echo "================"
           echo ""
-
-          # Stop proxy
-          brew services stop claude-plus 2>/dev/null || true
-          local pidfile="$HOME/.claude/automode-proxy/proxy.pid"
-          if [ -f "$pidfile" ]; then
-              kill "$(cat "$pidfile")" 2>/dev/null || true
-              rm -f "$pidfile"
-          fi
-          echo "  ✓ Proxy stopped"
 
           # Remove shell config
           if grep -q "$MARKER" "$SHELL_RC" 2>/dev/null; then
@@ -233,7 +129,6 @@ SHELL
   def post_install
     (bin/"claude-setup").chmod 0755
     (bin/"claude-auto").chmod 0755
-    (bin/"claude-automode-proxy").chmod 0755
   end
 
   def caveats
@@ -242,19 +137,12 @@ SHELL
 
         claude-setup
 
-      This starts the auto mode proxy and adds shell aliases.
+      This adds the shell alias and brew wrapper.
       Run `claude-setup status` to check state, `claude-setup undo` to revert.
     EOS
   end
 
-  service do
-    run [opt_bin/"claude-automode-proxy"]
-    keep_alive true
-    log_path var/"log/claude-plus.log"
-    error_log_path var/"log/claude-plus.log"
-  end
-
   test do
-    assert_match "automode-proxy", (bin/"claude-auto").read
+    assert_match "--permission-mode auto", (bin/"claude-auto").read
   end
 end

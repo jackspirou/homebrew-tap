@@ -10,7 +10,7 @@ brew install --HEAD jackspirou/tap/claude-plus
 claude-setup && source ~/.zshrc
 ```
 
-That's it. Use `claude` for auto mode, `\claude` for normal mode.
+Use `claude` for auto mode, `\claude` for normal mode.
 
 ## What's included
 
@@ -19,61 +19,15 @@ That's it. Use `claude` for auto mode, `\claude` for normal mode.
 | `claude-setup` | One-time configuration (idempotent, reversible) |
 | `claude-auto` | Wrapper that runs claude with auto mode |
 | `claude-channel` | Switch between latest/stable channels, pin versions |
-| `claude-automode-proxy` | HTTPS proxy that patches GrowthBook feature flags |
 
 ## Auto Mode
 
-### Why?
+`claude-auto` runs `claude --permission-mode auto "$@"`. The alias that
+`claude-setup` writes points `claude` at this wrapper, so auto mode is the
+default for an interactive session.
 
-Claude Code gates auto mode in two ways:
-
-1. **Server-side feature flags** — GrowthBook `remoteEval` returns `tengu_auto_mode_config.enabled = "disabled"` for some accounts. The HTTPS proxy intercepts these responses and patches the flag to `"enabled"`.
-2. **Client-side plan check** — Since v2.1.139, the compiled binary hardcodes `if (isMaxPlan && model ∈ {opus-4-6, sonnet-4-6}) return false` in the `modelSupported` function, blocking auto mode for these models on Max plans regardless of feature flags. The `claude-auto` wrapper binary-patches this check on each launch.
-
-### Supported models
-
-| Model | Native Auto Mode | With This Patch |
-|-------|------------------|-----------------|
-| claude-opus-4-8 | Max, Team, Enterprise | (not needed) |
-| claude-opus-4-7 | Max, Team, Enterprise | (not needed) |
-| claude-opus-4-6 | Team, Enterprise only | **Max** |
-| claude-sonnet-4-6 | Team, Enterprise only | **Max** |
-| claude-haiku-4-6 | Not available | **Max** |
-| claude-opus-4-5 | Not available | **Max** |
-| claude-sonnet-4-5 | Not available | **Max** |
-| claude-haiku-4-5 | Not available | **Max** |
-
-The proxy unions Anthropic's server-returned `allowModels` with the floor above, so any model Anthropic ships server-side stays enabled — the table is a known floor, not a closed list.
-
-### How it works
-
-```
-$ claude  (via alias)
-     │
-     ▼
-┌─────────────────────────────────────────────────────┐
-│  claude-auto wrapper:                               │
-│                                                     │
-│  1. Patch binary (Max plan gate → noop, idempotent) │
-│  2. Start proxy if not running                      │
-│  3. exec claude with HTTPS_PROXY pointed at proxy   │
-└─────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────┐
-│  automode-proxy (HTTPS interception):               │
-│  • Intercepts api.anthropic.com /api/eval/ responses│
-│  • Patches tengu_auto_mode_config.enabled="enabled" │
-│  • Patches ccr_auto_permission_mode=true            │
-│  • Passes all other API traffic through unmodified  │
-└─────────────────────────────────────────────────────┘
-```
-
-### Security
-
-- **No macOS security settings are modified** — no keychain changes, no system trust store edits
-- `NODE_TLS_REJECT_UNAUTHORIZED=0` is set only on the `claude` process, not system-wide
-- Self-signed certs are stored locally in `~/.claude/automode-proxy/`
-- The proxy binds to `127.0.0.1` only (not externally accessible)
+Auto mode is a server-gated feature. Anthropic controls availability per
+account and per model.
 
 ## Channel Switching
 
@@ -100,31 +54,17 @@ claude-setup undo     # revert all changes
 ```
 
 What `claude-setup` does:
-1. Starts the auto mode proxy via `brew services`
-2. Adds `alias claude='claude-auto'` to shell config
-3. Sources brew wrapper for `brew upgrade claude-code` routing
+
+1. Adds `alias claude='claude-auto'` to shell config.
+2. Sources brew wrapper for `brew upgrade claude-code` routing.
 
 ## Usage
 
 | Command | Mode | Notes |
 |---------|------|-------|
-| `claude` | Auto | Via alias, starts proxy if needed |
+| `claude` | Auto | Via alias |
 | `\claude` | Normal | Bypasses alias, runs claude directly |
 | `claude-auto` | Auto | Direct wrapper call |
-
-## Manual Control
-
-```bash
-brew services start claude-plus   # start proxy
-brew services stop claude-plus    # stop proxy
-brew services list | grep claude  # check status
-```
-
-## Logs
-
-```bash
-cat /opt/homebrew/var/log/claude-plus.log
-```
 
 ## Uninstall
 
@@ -132,8 +72,3 @@ cat /opt/homebrew/var/log/claude-plus.log
 claude-setup undo
 brew uninstall claude-plus
 ```
-
-## Limitations
-
-- Requires Max, Team, or Enterprise subscription (auto mode uses a server-side classifier)
-- The patch is local to your machine; doesn't affect team/org settings
