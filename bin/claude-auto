@@ -1,0 +1,39 @@
+#!/bin/bash
+# Run Claude Code with auto mode by default.
+# Remote Control does not inherit a leading --permission-mode; put it after
+# the verb so `claude rc` / `claude remote-control` can start.
+
+# Honor an explicit permission mode from the caller.
+for arg in "$@"; do
+  case "$arg" in
+    --permission-mode|--permission-mode=*)
+      exec claude "$@"
+      ;;
+  esac
+done
+
+# Insert after the first positional verb when that verb is Remote Control.
+args=("$@")
+i=0
+while [[ $i -lt ${#args[@]} ]]; do
+  arg="${args[$i]}"
+  case "$arg" in
+    --)
+      i=$((i + 1))
+      break
+      ;;
+    -*)
+      i=$((i + 1))
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+verb="${args[$i]:-}"
+if [[ "$verb" == "rc" || "$verb" == "remote-control" ]]; then
+  exec claude "${args[@]:0:$((i + 1))}" --permission-mode auto "${args[@]:$((i + 1))}"
+fi
+
+exec claude --permission-mode auto "$@"

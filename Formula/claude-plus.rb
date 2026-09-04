@@ -5,17 +5,10 @@ class ClaudePlus < Formula
   license "MIT"
 
   def install
-    # Install claude-channel and the brew wrapper from source
+    # Install claude-channel, claude-auto, and the brew wrapper from source
     bin.install "bin/claude-channel"
+    bin.install "bin/claude-auto"
     (share/"claude-plus").install "etc/claude-brew.sh"
-
-    # Generate wrapper that runs claude with auto mode
-    (bin/"claude-auto").write <<~BASH
-      #!/bin/bash
-      # Run Claude Code with auto mode by default.
-      exec claude --permission-mode auto "$@"
-    BASH
-    chmod 0755, bin/"claude-auto"
 
     # Generate setup command
     brew_sh = opt_share/"claude-plus/claude-brew.sh"
@@ -143,6 +136,8 @@ class ClaudePlus < Formula
   end
 
   test do
-    assert_match "--permission-mode auto", (bin/"claude-auto").read
+    wrapper = (bin/"claude-auto").read
+    assert_match "--permission-mode auto", wrapper
+    assert_match "remote-control", wrapper
   end
 end

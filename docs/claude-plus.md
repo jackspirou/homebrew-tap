@@ -22,9 +22,14 @@ Use `claude` for auto mode, `\claude` for normal mode.
 
 ## Auto Mode
 
-`claude-auto` runs `claude --permission-mode auto "$@"`. The alias that
+`claude-auto` adds `--permission-mode auto` for you. The alias that
 `claude-setup` writes points `claude` at this wrapper, so auto mode is the
 default for an interactive session.
+
+Remote Control does not inherit a flag placed before the verb. For
+`claude rc` and `claude remote-control`, the wrapper puts
+`--permission-mode auto` after the verb. An explicit `--permission-mode`
+from the caller is left alone.
 
 Auto mode is a server-gated feature. Anthropic controls availability per
 account and per model.
