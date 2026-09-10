@@ -5,7 +5,9 @@ Personal [Homebrew](https://brew.sh) tap by [@jackspirou](https://github.com/jac
 ## Quick Start (Claude Code)
 
 ```bash
-brew install jackspirou/tap/claude-code
+brew trust --cask jackspirou/tap/claude-code
+brew install --cask jackspirou/tap/claude-code
+brew trust --formula jackspirou/tap/claude-plus
 brew install --HEAD jackspirou/tap/claude-plus
 claude-setup && source ~/.zshrc
 ```
